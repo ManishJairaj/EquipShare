@@ -103,3 +103,15 @@ table. Passwords are hashed with Argon2 and access tokens are signed JWTs.
 - `POST /auth/register` creates a user.
 - `POST /auth/login` accepts an OAuth2 form with the email in `username`.
 - `GET /auth/me` returns the authenticated user for a valid Bearer token.
+
+## Equipment API
+
+- `POST /equipment` creates a listing owned by the authenticated user.
+- `GET /equipment` lists all equipment publicly.
+- `GET /equipment/me` lists the authenticated user's equipment.
+- `GET /equipment/{equipment_id}` returns one public listing.
+- `PATCH /equipment/{equipment_id}` updates an owned listing.
+- `DELETE /equipment/{equipment_id}` deletes an owned listing.
+
+Only a listing's owner can update or delete it. Ownership is derived from the
+authenticated user and is never accepted from request data.

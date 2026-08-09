@@ -1,15 +1,31 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class AvailabilityStatus(StrEnum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+
+
+class EquipmentCondition(StrEnum):
+    NEW = "new"
+    EXCELLENT = "excellent"
+    GOOD = "good"
+    FAIR = "fair"
+
+
 class EquipmentBase(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     name: str = Field(min_length=1, max_length=150)
     description: str | None = None
     category: str = Field(min_length=1, max_length=100)
-    condition: str = Field(min_length=1, max_length=50)
+    condition: EquipmentCondition
     price_per_day: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    availability_status: AvailabilityStatus = AvailabilityStatus.AVAILABLE
 
 
 class EquipmentCreate(EquipmentBase):
@@ -17,21 +33,22 @@ class EquipmentCreate(EquipmentBase):
 
 
 class EquipmentUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
     name: str | None = Field(default=None, min_length=1, max_length=150)
     description: str | None = None
     category: str | None = Field(default=None, min_length=1, max_length=100)
-    condition: str | None = Field(default=None, min_length=1, max_length=50)
+    condition: EquipmentCondition | None = None
     price_per_day: Decimal | None = Field(
         default=None, gt=0, max_digits=10, decimal_places=2
     )
-    availability_status: str | None = Field(default=None, min_length=1, max_length=50)
+    availability_status: AvailabilityStatus | None = None
 
 
 class EquipmentOut(EquipmentBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
 
     id: int
-    availability_status: str
     owner_id: int
     created_at: datetime
     updated_at: datetime
