@@ -1,0 +1,10 @@
+fastapi[standard]
+uvicorn
+sqlalchemy
+psycopg[binary]
+alembic
+pydantic
+python-dotenv
+python-jose
+passlib
+pwdlib[argon2]
