@@ -12,6 +12,7 @@ from app.services.security import create_access_token, verify_password
 
 def main() -> None:
     unique_id = uuid4().hex
+    username = f"auth_{unique_id[:20]}"
     email = f"auth-test-{unique_id}@example.com"
     unknown_email = f"missing-{unique_id}@example.com"
     password = "IntegrationTestPassword!42"
@@ -20,11 +21,22 @@ def main() -> None:
     try:
         registration = client.post(
             "/auth/register",
-            json={"name": "Authentication Test", "email": email, "password": password},
+            json={
+                "name": "Authentication Test",
+                "username": username,
+                "email": email,
+                "password": password,
+            },
         )
         assert registration.status_code == 201, registration.text
         registration_data = registration.json()
-        assert set(registration_data) == {"id", "name", "email", "created_at"}
+        assert set(registration_data) == {
+            "id",
+            "name",
+            "username",
+            "email",
+            "created_at",
+        }
         assert "password" not in registration_data
         assert "hashed_password" not in registration_data
 
@@ -38,25 +50,53 @@ def main() -> None:
 
         duplicate = client.post(
             "/auth/register",
-            json={"name": "Duplicate", "email": email, "password": password},
+            json={
+                "name": "Duplicate Username",
+                "username": username.upper(),
+                "email": f"other-{unique_id}@example.com",
+                "password": password,
+            },
         )
         assert duplicate.status_code == 409
 
-        login = client.post(
-            "/auth/login",
-            data={"username": email, "password": password},
+        duplicate_email = client.post(
+            "/auth/register",
+            json={
+                "name": "Duplicate Email",
+                "username": f"other_{unique_id[:20]}",
+                "email": email.upper(),
+                "password": password,
+            },
         )
-        assert login.status_code == 200, login.text
-        login_data = login.json()
+        assert duplicate_email.status_code == 409
+
+        username_login = client.post(
+            "/auth/login",
+            data={"username": username.upper(), "password": password},
+        )
+        assert username_login.status_code == 200, username_login.text
+        login_data = username_login.json()
         assert login_data["token_type"] == "bearer"
         access_token = login_data["access_token"]
         assert access_token
 
+        email_login = client.post(
+            "/auth/login",
+            data={"username": email.upper(), "password": password},
+        )
+        assert email_login.status_code == 200, email_login.text
+
         wrong_password = client.post(
+            "/auth/login",
+            data={"username": username, "password": "WrongPassword!42"},
+        )
+        assert wrong_password.status_code == 401
+
+        wrong_email_password = client.post(
             "/auth/login",
             data={"username": email, "password": "WrongPassword!42"},
         )
-        assert wrong_password.status_code == 401
+        assert wrong_email_password.status_code == 401
 
         unknown_user = client.post(
             "/auth/login",

@@ -5,6 +5,13 @@ from app.schemas.equipment import (
     EquipmentOut,
     EquipmentUpdate,
 )
+from app.schemas.rental_request import (
+    RentalBorrowerSummary,
+    RentalEquipmentSummary,
+    RentalRequestCreate,
+    RentalRequestDetail,
+    RentalRequestOut,
+)
 from app.schemas.user import Token, TokenData, UserCreate, UserOut
 
 __all__ = [
@@ -13,6 +20,11 @@ __all__ = [
     "EquipmentCreate",
     "EquipmentOut",
     "EquipmentUpdate",
+    "RentalBorrowerSummary",
+    "RentalEquipmentSummary",
+    "RentalRequestCreate",
+    "RentalRequestDetail",
+    "RentalRequestOut",
     "Token",
     "TokenData",
     "UserCreate",
