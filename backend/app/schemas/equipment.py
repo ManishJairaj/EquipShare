@@ -1,8 +1,13 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+        return str(self.value)
 
 
 class AvailabilityStatus(StrEnum):
