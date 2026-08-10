@@ -14,7 +14,12 @@ def register_and_login(
 ) -> tuple[dict, dict[str, str]]:
     registration = client.post(
         "/auth/register",
-        json={"name": name, "email": email, "password": password},
+        json={
+            "name": name,
+            "username": f"test_{uuid4().hex[:20]}",
+            "email": email,
+            "password": password,
+        },
     )
     assert registration.status_code == 201, registration.text
 

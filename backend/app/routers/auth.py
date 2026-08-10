@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,16 +20,21 @@ def register_user(
     user_data: UserCreate,
     db: Annotated[Session, Depends(get_db)],
 ) -> User:
+    username = user_data.username.lower()
     email = str(user_data.email).lower()
-    existing_user = db.scalar(select(User).where(User.email == email))
+    existing_user = db.scalar(
+        select(User).where(or_(User.username == username, User.email == email))
+    )
     if existing_user is not None:
+        field = "username" if existing_user.username == username else "email"
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A user with this email already exists",
+            detail=f"A user with this {field} already exists",
         )
 
     user = User(
         name=user_data.name,
+        username=username,
         email=email,
         hashed_password=hash_password(user_data.password),
     )
@@ -41,7 +46,7 @@ def register_user(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="A user with this email already exists",
+            detail="A user with this username or email already exists",
         ) from None
 
     db.refresh(user)
@@ -53,13 +58,20 @@ def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Annotated[Session, Depends(get_db)],
 ) -> Token:
-    email = form_data.username.lower()
-    user = db.scalar(select(User).where(User.email == email))
+    login_identifier = form_data.username.lower()
+    user = db.scalar(
+        select(User).where(
+            or_(
+                User.username == login_identifier,
+                User.email == login_identifier,
+            )
+        )
+    )
 
     if user is None or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
