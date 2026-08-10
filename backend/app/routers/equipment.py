@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import Equipment, User
@@ -13,7 +13,11 @@ router = APIRouter(prefix="/equipment", tags=["Equipment"])
 
 
 def get_equipment_or_404(equipment_id: int, db: Session) -> Equipment:
-    equipment = db.get(Equipment, equipment_id)
+    equipment = db.scalar(
+        select(Equipment)
+        .options(joinedload(Equipment.owner))
+        .where(Equipment.id == equipment_id)
+    )
     if equipment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -35,12 +39,17 @@ def create_equipment(
     db.add(equipment)
     db.commit()
     db.refresh(equipment)
-    return equipment
+    return get_equipment_or_404(equipment.id, db)
 
 
 @router.get("", response_model=list[EquipmentOut])
 def list_equipment(db: Annotated[Session, Depends(get_db)]) -> list[Equipment]:
-    return list(db.scalars(select(Equipment).order_by(Equipment.id)).all())
+    statement = (
+        select(Equipment)
+        .options(joinedload(Equipment.owner))
+        .order_by(Equipment.id)
+    )
+    return list(db.scalars(statement).all())
 
 
 @router.get("/me", response_model=list[EquipmentOut])
@@ -50,6 +59,7 @@ def list_my_equipment(
 ) -> list[Equipment]:
     statement = (
         select(Equipment)
+        .options(joinedload(Equipment.owner))
         .where(Equipment.owner_id == current_user.id)
         .order_by(Equipment.id)
     )
@@ -83,7 +93,7 @@ def update_equipment(
 
     db.commit()
     db.refresh(equipment)
-    return equipment
+    return get_equipment_or_404(equipment.id, db)
 
 
 @router.delete("/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT)

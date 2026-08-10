@@ -47,7 +47,8 @@ def create_equipment(
             "description": "Rental workflow integration test equipment",
             "category": "test equipment",
             "condition": "good",
-            "price_per_day": "12.50",
+            "listing_mode": "rent",
+            "price": "12.50",
             "availability_status": availability_status,
         },
     )

@@ -1,9 +1,11 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.models import RentalStatus
+from app.schemas.equipment import ListingMode
 
 
 class RentalRequestCreate(BaseModel):
@@ -41,6 +43,8 @@ class RentalEquipmentSummary(BaseModel):
     id: int
     name: str
     category: str
+    listing_mode: ListingMode
+    price: Decimal
     owner_id: int
 
 

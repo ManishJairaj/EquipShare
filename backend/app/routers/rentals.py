@@ -5,7 +5,12 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models import Equipment, RentalRequest, RentalStatus, User
-from app.schemas import AvailabilityStatus, RentalRequestCreate, RentalRequestDetail
+from app.schemas import (
+    AvailabilityStatus,
+    ListingMode,
+    RentalRequestCreate,
+    RentalRequestDetail,
+)
 from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/rentals", tags=["Rentals"])
@@ -63,6 +68,11 @@ def create_rental_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot request your own equipment",
+        )
+    if equipment.listing_mode != ListingMode.RENT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sale listings cannot be rented",
         )
     if equipment.availability_status != AvailabilityStatus.AVAILABLE:
         raise HTTPException(

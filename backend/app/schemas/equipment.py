@@ -22,6 +22,19 @@ class EquipmentCondition(StrEnum):
     FAIR = "fair"
 
 
+class ListingMode(StrEnum):
+    RENT = "rent"
+    SELL = "sell"
+
+
+class OwnerSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    name: str
+
+
 class EquipmentBase(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
 
@@ -29,7 +42,8 @@ class EquipmentBase(BaseModel):
     description: str | None = None
     category: str = Field(min_length=1, max_length=100)
     condition: EquipmentCondition
-    price_per_day: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    listing_mode: ListingMode
+    price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     availability_status: AvailabilityStatus = AvailabilityStatus.AVAILABLE
 
 
@@ -44,9 +58,8 @@ class EquipmentUpdate(BaseModel):
     description: str | None = None
     category: str | None = Field(default=None, min_length=1, max_length=100)
     condition: EquipmentCondition | None = None
-    price_per_day: Decimal | None = Field(
-        default=None, gt=0, max_digits=10, decimal_places=2
-    )
+    listing_mode: ListingMode | None = None
+    price: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
     availability_status: AvailabilityStatus | None = None
 
 
@@ -55,5 +68,6 @@ class EquipmentOut(EquipmentBase):
 
     id: int
     owner_id: int
+    owner: OwnerSummary
     created_at: datetime
     updated_at: datetime
