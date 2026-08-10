@@ -3,6 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api from '../services/api'
 
+const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 2,
+}).format(Number(value))
+
 function Dashboard() {
   const navigate = useNavigate()
   const token = localStorage.getItem('token')
@@ -20,7 +26,8 @@ function Dashboard() {
     description: '',
     category: '',
     condition: 'good',
-    price_per_day: '',
+    listing_mode: 'rent',
+    price: '',
     availability_status: 'available'
   })
   const [formError, setFormError] = useState('')
@@ -74,7 +81,8 @@ function Dashboard() {
       description: '',
       category: '',
       condition: 'good',
-      price_per_day: '',
+      listing_mode: 'rent',
+      price: '',
       availability_status: 'available'
     })
     setIsModalOpen(true)
@@ -87,7 +95,8 @@ function Dashboard() {
       description: item.description || '',
       category: item.category,
       condition: item.condition,
-      price_per_day: item.price_per_day,
+      listing_mode: item.listing_mode,
+      price: item.price,
       availability_status: item.availability_status
     })
     setIsModalOpen(true)
@@ -95,8 +104,8 @@ function Dashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.category || !formData.price_per_day) {
-      setFormError('Name, Category, and Price per day are required.')
+    if (!formData.name || !formData.category || !formData.price) {
+      setFormError('Name, Category, and Price are required.')
       return
     }
 
@@ -109,7 +118,8 @@ function Dashboard() {
         description: formData.description || null,
         category: formData.category,
         condition: formData.condition,
-        price_per_day: parseFloat(formData.price_per_day),
+        listing_mode: formData.listing_mode,
+        price: parseFloat(formData.price),
         availability_status: formData.availability_status
       }
 
@@ -154,7 +164,7 @@ function Dashboard() {
   // Calculated Stats
   const activeListings = myEquipment.length
   const availableCount = myEquipment.filter(item => item.availability_status === 'available').length
-  const totalValue = myEquipment.reduce((sum, item) => sum + parseFloat(item.price_per_day), 0).toFixed(2)
+  const totalValue = myEquipment.reduce((sum, item) => sum + Number(item.price), 0)
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
@@ -223,8 +233,8 @@ function Dashboard() {
 
               <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Cumulative Income/Value</span>
-                  <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">${totalValue} <span className="text-xs font-normal text-slate-400">/day</span></span>
+                  <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Total Listed Value</span>
+                  <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">{formatPrice(totalValue)}</span>
                 </div>
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-xl">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,9 +266,10 @@ function Dashboard() {
                       <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         <th className="px-6 py-4">Equipment Info</th>
                         <th className="px-6 py-4">Category</th>
+                        <th className="px-6 py-4">Listing Type</th>
                         <th className="px-6 py-4">Condition</th>
                         <th className="px-6 py-4">Availability</th>
-                        <th className="px-6 py-4 text-right">Price per Day</th>
+                        <th className="px-6 py-4 text-right">Price</th>
                         <th className="px-6 py-4 text-center">Actions</th>
                       </tr>
                     </thead>
@@ -270,8 +281,20 @@ function Dashboard() {
                             <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
                               {item.description || 'No description'}
                             </span>
+                            <span className="text-xs text-indigo-500 dark:text-indigo-400 mt-1 block">
+                              Listed by {item.owner?.username ? `@${item.owner.username}` : item.owner?.name || 'Unknown'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-sm font-medium">{item.category}</td>
+                          <td className="px-6 py-4">
+                            <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full ${
+                              item.listing_mode === 'rent'
+                                ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
+                                : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
+                            }`}>
+                              {item.listing_mode === 'rent' ? 'FOR RENT' : 'FOR SALE'}
+                            </span>
+                          </td>
                           <td className="px-6 py-4">
                             <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 capitalize">
                               {item.condition}
@@ -290,7 +313,8 @@ function Dashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white text-sm">
-                            ${item.price_per_day}
+                            {formatPrice(item.price)}
+                            {item.listing_mode === 'rent' && <span className="text-xs text-slate-400 font-normal">/day</span>}
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="inline-flex gap-2">
@@ -364,16 +388,16 @@ function Dashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Price Per Day ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="price_per_day"
-                    value={formData.price_per_day}
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Listing Type</label>
+                  <select
+                    name="listing_mode"
+                    value={formData.listing_mode}
                     onChange={handleInputChange}
-                    placeholder="e.g. 15.00"
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
-                  />
+                  >
+                    <option value="rent">Rent</option>
+                    <option value="sell">Sell</option>
+                  </select>
                 </div>
               </div>
 
@@ -405,6 +429,22 @@ function Dashboard() {
                     <option value="unavailable">Unavailable (Reserved)</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  {formData.listing_mode === 'rent' ? 'Price Per Day (₹)' : 'Selling Price (₹)'}
+                </label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleInputChange}
+                  placeholder={formData.listing_mode === 'rent' ? 'e.g. 500' : 'e.g. 15000'}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                />
               </div>
 
               <div>

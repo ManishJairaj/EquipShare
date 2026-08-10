@@ -119,6 +119,11 @@ Registration requires a unique username and email. Usernames are lowercase,
 Only a listing's owner can update or delete it. Ownership is derived from the
 authenticated user and is never accepted from request data.
 
+Equipment listings use `listing_mode` (`rent` or `sell`) and one numeric `price`.
+Rental prices are displayed per day, while sale prices are displayed as one-time
+prices. API responses include only the owner's public `id`, `username`, and
+`name`; PostgreSQL relationships continue to use `owner_id`.
+
 ## Rental request API
 
 - `POST /rentals` creates a pending request for the authenticated borrower.
