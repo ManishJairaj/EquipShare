@@ -59,7 +59,7 @@ function Register() {
       })
       setSuccess(true)
       setTimeout(() => {
-        navigate('/login')
+        navigate('/')
       }, 2000)
     } catch (err) {
       setError(formatApiError(err))
@@ -95,7 +95,7 @@ function Register() {
 
           {success && (
             <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-sm font-semibold">
-              Registration successful! Redirecting to login page...
+              Registration successful! Redirecting to explore...
             </div>
           )}
 

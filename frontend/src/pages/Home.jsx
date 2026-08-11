@@ -16,6 +16,7 @@ function Home() {
   const token = localStorage.getItem('token')
 
   const [equipment, setEquipment] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -30,8 +31,77 @@ function Home() {
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
 
   useEffect(() => {
+    const fetchUser = async () => {
+      if (!token) return
+      try {
+        const res = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        setCurrentUser(res.data)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
     fetchEquipment()
-  }, [])
+    fetchUser()
+  }, [token])
+
+  // Real-time reservation date checker
+  useEffect(() => {
+    if (!bookingItem || bookingItem.listing_mode !== 'rent' || !startDate || !endDate) {
+      setBookingError('')
+      return
+    }
+
+    const start = new Date(startDate + 'T00:00:00')
+    const end = new Date(endDate + 'T00:00:00')
+
+    if (start > end) {
+      setBookingError('End date must be on or after start date.')
+      return
+    }
+
+    // Check if start or end date itself is reserved
+    const startReserved = bookingItem.rental_requests?.some(r => {
+      if (r.status !== 'accepted') return false
+      const rStart = new Date(r.start_date + 'T00:00:00')
+      const rEnd = new Date(r.end_date + 'T00:00:00')
+      return start >= rStart && start <= rEnd
+    })
+
+    const endReserved = bookingItem.rental_requests?.some(r => {
+      if (r.status !== 'accepted') return false
+      const rStart = new Date(r.start_date + 'T00:00:00')
+      const rEnd = new Date(r.end_date + 'T00:00:00')
+      return end >= rStart && end <= rEnd
+    })
+
+    if (startReserved) {
+      setBookingError('The selected start date is already reserved. Please select a free date.')
+      return
+    }
+
+    if (endReserved) {
+      setBookingError('The selected end date is already reserved. Please select a free date.')
+      return
+    }
+
+    // Check if selected range spans over any accepted reservation
+    const hasOverlap = bookingItem.rental_requests?.some(r => {
+      if (r.status !== 'accepted') return false
+      const rStart = new Date(r.start_date + 'T00:00:00')
+      const rEnd = new Date(r.end_date + 'T00:00:00')
+      return start <= rEnd && end >= rStart
+    })
+
+    if (hasOverlap) {
+      setBookingError('Selected range overlaps with an existing accepted reservation. Please check other dates.')
+      return
+    }
+
+    setBookingError('')
+  }, [startDate, endDate, bookingItem])
 
   const fetchEquipment = async () => {
     setLoading(true)
@@ -89,15 +159,42 @@ function Home() {
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault()
-    if (!startDate || !endDate) {
-      setBookingError('Please select both start and end dates.')
-      return
-    }
+    
+    const isRental = bookingItem.listing_mode === 'rent'
+    let startVal = startDate
+    let endVal = endDate
 
-    const days = calculateDays()
-    if (days <= 0) {
-      setBookingError('End date must be on or after start date.')
-      return
+    if (isRental) {
+      if (!startDate || !endDate) {
+        setBookingError('Please select both start and end dates.')
+        return
+      }
+
+      const days = calculateDays()
+      if (days <= 0) {
+        setBookingError('End date must be on or after start date.')
+        return
+      }
+
+      // Check for overlap with accepted bookings
+      const hasOverlap = bookingItem.rental_requests?.some(r => {
+        if (r.status !== 'accepted') return false
+        const rStart = new Date(r.start_date + 'T00:00:00')
+        const rEnd = new Date(r.end_date + 'T00:00:00')
+        const selStart = new Date(startDate + 'T00:00:00')
+        const selEnd = new Date(endDate + 'T00:00:00')
+        return selStart <= rEnd && selEnd >= rStart
+      })
+
+      if (hasOverlap) {
+        setBookingError('These dates overlap with an existing accepted reservation. Please check "Booked Dates" and select other dates.')
+        return
+      }
+    } else {
+      // For selling items, use today's date for start & end
+      const todayStr = new Date().toISOString().split('T')[0]
+      startVal = todayStr
+      endVal = todayStr
     }
 
     setBookingSubmitting(true)
@@ -107,8 +204,8 @@ function Home() {
     try {
       await api.post('/rentals', {
         equipment_id: bookingItem.id,
-        start_date: startDate,
-        end_date: endDate
+        start_date: startVal,
+        end_date: endVal
       }, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -227,6 +324,7 @@ function Home() {
               <EquipmentCard 
                 key={item.id} 
                 item={item} 
+                isOwner={currentUser && item.owner_id === currentUser.id}
                 onRentClick={() => handleRentClick(item)}
               />
             ))}
@@ -239,10 +337,10 @@ function Home() {
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl relative animate-scale-up">
             <h3 className="text-2xl font-extrabold text-slate-950 dark:text-white mb-2">
-              Request Rental
+              {bookingItem.listing_mode === 'rent' ? 'Request Rental' : 'Request Purchase'}
             </h3>
             <p className="text-slate-500 text-sm mb-6">
-              You are requesting to rent <span className="font-semibold text-slate-900 dark:text-white">{bookingItem.name}</span>
+              You are requesting to {bookingItem.listing_mode === 'rent' ? 'rent' : 'buy'} <span className="font-semibold text-slate-900 dark:text-white">{bookingItem.name}</span>
             </p>
 
             {bookingError && (
@@ -253,54 +351,70 @@ function Home() {
 
             {bookingSuccess && (
               <div className="mb-5 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-sm font-semibold">
-                Rental request submitted successfully! Redirecting...
+                {bookingItem.listing_mode === 'rent'
+                  ? 'Rental request submitted successfully! Redirecting...'
+                  : 'Purchase request submitted successfully! Redirecting...'}
               </div>
             )}
 
             <form onSubmit={handleBookingSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    setStartDate(e.target.value)
-                    setBookingError('')
-                  }}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
-                />
-              </div>
+              {bookingItem.listing_mode === 'rent' ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Start Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value)
+                        setBookingError('')
+                      }}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value)
-                    setBookingError('')
-                  }}
-                  min={startDate || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
-                />
-              </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">End Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value)
+                        setBookingError('')
+                      }}
+                      min={startDate || new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                    />
+                  </div>
 
-              {/* Price Calculation details */}
-              {startDate && endDate && calculateDays() > 0 && (
-                <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-2 mt-4 text-sm font-medium text-slate-600 dark:text-slate-400">
-                  <div className="flex justify-between">
-                    <span>Price per Day:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(bookingItem.price)}</span>
+                  {/* Price Calculation details */}
+                  {startDate && endDate && calculateDays() > 0 && (
+                    <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-2 mt-4 text-sm font-medium text-slate-600 dark:text-slate-400">
+                      <div className="flex justify-between">
+                        <span>Price per Day:</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(bookingItem.price)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Days:</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">{calculateDays()} days</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800 font-extrabold text-base text-slate-950 dark:text-white">
+                        <span>Estimated Total:</span>
+                        <span>{formatPrice(calculateDays() * bookingItem.price)}</span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+                  <div className="flex justify-between text-slate-900 dark:text-white font-extrabold text-base">
+                    <span>Purchase Price:</span>
+                    <span>{formatPrice(bookingItem.price)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Total Days:</span>
-                    <span className="font-semibold text-slate-900 dark:text-white">{calculateDays()} days</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800 font-extrabold text-base text-slate-950 dark:text-white">
-                    <span>Estimated Total:</span>
-                    <span>{formatPrice(calculateDays() * bookingItem.price)}</span>
-                  </div>
+                  <p className="text-xs text-slate-400 mt-2">
+                    Click "Confirm Buy" to send a purchase offer to the owner. Once they accept, the item is marked as Sold to you.
+                  </p>
                 </div>
               )}
 
@@ -315,10 +429,14 @@ function Home() {
                 </button>
                 <button
                   type="submit"
-                  disabled={bookingSubmitting || bookingSuccess}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                  disabled={bookingSubmitting || bookingSuccess || !!bookingError}
+                  className="flex-1 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {bookingSubmitting ? 'Requesting...' : 'Request Rent'}
+                  {bookingSubmitting
+                    ? 'Submitting...'
+                    : bookingItem.listing_mode === 'rent'
+                    ? 'Request Rent'
+                    : 'Confirm Buy'}
                 </button>
               </div>
             </form>
