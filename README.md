@@ -99,9 +99,12 @@ alembic upgrade head
 
 Authentication is handled entirely by FastAPI using the `users` PostgreSQL
 table. Passwords are hashed with Argon2 and access tokens are signed JWTs.
+Registration requires a unique username and email. Usernames are lowercase,
+3–30 characters, and may contain letters, numbers, and underscores.
 
 - `POST /auth/register` creates a user.
-- `POST /auth/login` accepts an OAuth2 form with the email in `username`.
+- `POST /auth/login` accepts an OAuth2 form with either username or email in the
+  form's `username` field.
 - `GET /auth/me` returns the authenticated user for a valid Bearer token.
 
 ## Equipment API
@@ -115,3 +118,23 @@ table. Passwords are hashed with Argon2 and access tokens are signed JWTs.
 
 Only a listing's owner can update or delete it. Ownership is derived from the
 authenticated user and is never accepted from request data.
+
+Equipment listings use `listing_mode` (`rent` or `sell`) and one numeric `price`.
+Rental prices are displayed per day, while sale prices are displayed as one-time
+prices. API responses include only the owner's public `id`, `username`, and
+`name`; PostgreSQL relationships continue to use `owner_id`.
+
+## Rental request API
+
+- `POST /rentals` creates a pending request for the authenticated borrower.
+- `GET /rentals/my-requests` lists the borrower's outgoing requests.
+- `GET /rentals/incoming` lists requests for the owner's equipment.
+- `GET /rentals/{request_id}` is available to the borrower and equipment owner.
+- `PATCH /rentals/{request_id}/accept` accepts a pending request as the owner.
+- `PATCH /rentals/{request_id}/reject` rejects a pending request as the owner.
+- `PATCH /rentals/{request_id}/cancel` cancels a pending or accepted request as
+  the borrower.
+
+Accepted requests cannot overlap for the same equipment and date range.
+Equipment availability is not changed automatically because requests may be for
+future dates; accepted rental requests are the reservation source of truth.

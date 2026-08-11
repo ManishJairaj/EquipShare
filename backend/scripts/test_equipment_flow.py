@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -44,7 +45,8 @@ def main() -> None:
         "description": "Camera body for student projects",
         "category": "camera",
         "condition": "excellent",
-        "price_per_day": "25.50",
+        "listing_mode": "rent",
+        "price": "500.00",
         "availability_status": "available",
     }
 
@@ -73,15 +75,49 @@ def main() -> None:
         equipment_a = created_a.json()
         equipment_a_id = equipment_a["id"]
         assert equipment_a["owner_id"] == user_a["id"]
-        assert Decimal(equipment_a["price_per_day"]) == Decimal("25.50")
+        assert equipment_a["owner"] == {
+            "id": user_a["id"],
+            "username": user_a["username"],
+            "name": user_a["name"],
+        }
+        assert equipment_a["listing_mode"] == "rent"
+        assert Decimal(equipment_a["price"]) == Decimal("500.00")
+
+        invalid_mode = client.post(
+            "/equipment",
+            json=equipment_payload | {"listing_mode": "exchange"},
+            headers=user_a_headers,
+        )
+        assert invalid_mode.status_code == 422
 
         created_b = client.post(
             "/equipment",
-            json=equipment_payload | {"name": "User B Camera"},
+            json=equipment_payload
+            | {
+                "name": "User B Camera",
+                "listing_mode": "sell",
+                "price": "15000.00",
+            },
             headers=user_b_headers,
         )
         assert created_b.status_code == 201, created_b.text
-        equipment_b_id = created_b.json()["id"]
+        equipment_b = created_b.json()
+        equipment_b_id = equipment_b["id"]
+        assert equipment_b["listing_mode"] == "sell"
+        assert Decimal(equipment_b["price"]) == Decimal("15000.00")
+        assert equipment_b["owner"]["username"] == user_b["username"]
+
+        future = date.today() + timedelta(days=10)
+        sale_rental = client.post(
+            "/rentals",
+            headers=user_a_headers,
+            json={
+                "equipment_id": equipment_b_id,
+                "start_date": future.isoformat(),
+                "end_date": (future + timedelta(days=1)).isoformat(),
+            },
+        )
+        assert sale_rental.status_code == 400
 
         all_equipment = client.get("/equipment")
         assert all_equipment.status_code == 200
@@ -133,15 +169,17 @@ def main() -> None:
             f"/equipment/{equipment_a_id}",
             json={
                 "condition": "good",
-                "price_per_day": "20.00",
+                "listing_mode": "sell",
+                "price": "12000.00",
                 "availability_status": "unavailable",
             },
             headers=user_a_headers,
         )
         assert updated.status_code == 200, updated.text
         assert updated.json()["condition"] == "good"
+        assert updated.json()["listing_mode"] == "sell"
         assert updated.json()["availability_status"] == "unavailable"
-        assert Decimal(updated.json()["price_per_day"]) == Decimal("20.00")
+        assert Decimal(updated.json()["price"]) == Decimal("12000.00")
         assert updated.json()["owner_id"] == user_a["id"]
 
         deleted_a = client.delete(

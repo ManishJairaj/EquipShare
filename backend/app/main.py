@@ -1,11 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import Base, engine
 from app.routers import auth_router, equipment_router, rentals_router
-
-# Auto-create tables if they do not exist
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="EquipShare API")
 
