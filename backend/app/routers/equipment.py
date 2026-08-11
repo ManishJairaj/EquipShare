@@ -13,11 +13,11 @@ router = APIRouter(prefix="/equipment", tags=["Equipment"])
 
 
 def get_equipment_or_404(equipment_id: int, db: Session) -> Equipment:
-    equipment = db.scalar(
+    equipment = db.scalars(
         select(Equipment)
-        .options(joinedload(Equipment.owner))
+        .options(joinedload(Equipment.owner), joinedload(Equipment.rental_requests))
         .where(Equipment.id == equipment_id)
-    )
+    ).unique().first()
     if equipment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -46,10 +46,10 @@ def create_equipment(
 def list_equipment(db: Annotated[Session, Depends(get_db)]) -> list[Equipment]:
     statement = (
         select(Equipment)
-        .options(joinedload(Equipment.owner))
+        .options(joinedload(Equipment.owner), joinedload(Equipment.rental_requests))
         .order_by(Equipment.id)
     )
-    return list(db.scalars(statement).all())
+    return list(db.scalars(statement).unique().all())
 
 
 @router.get("/me", response_model=list[EquipmentOut])
@@ -59,11 +59,11 @@ def list_my_equipment(
 ) -> list[Equipment]:
     statement = (
         select(Equipment)
-        .options(joinedload(Equipment.owner))
+        .options(joinedload(Equipment.owner), joinedload(Equipment.rental_requests))
         .where(Equipment.owner_id == current_user.id)
         .order_by(Equipment.id)
     )
-    return list(db.scalars(statement).all())
+    return list(db.scalars(statement).unique().all())
 
 
 @router.get("/{equipment_id}", response_model=EquipmentOut)

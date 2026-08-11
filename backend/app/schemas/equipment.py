@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -63,11 +63,20 @@ class EquipmentUpdate(BaseModel):
     availability_status: AvailabilityStatus | None = None
 
 
+class RentalRangeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    start_date: date
+    end_date: date
+    status: str
+
+
 class EquipmentOut(EquipmentBase):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
 
     id: int
     owner_id: int
     owner: OwnerSummary
+    rental_requests: list[RentalRangeOut] = []
     created_at: datetime
     updated_at: datetime

@@ -69,11 +69,6 @@ def create_rental_request(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot request your own equipment",
         )
-    if equipment.listing_mode != ListingMode.RENT:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Sale listings cannot be rented",
-        )
     if equipment.availability_status != AvailabilityStatus.AVAILABLE:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -181,6 +176,8 @@ def accept_rental_request(
         )
 
     rental_request.status = RentalStatus.ACCEPTED
+    if rental_request.equipment.listing_mode == ListingMode.SELL:
+        rental_request.equipment.availability_status = "unavailable"
     db.commit()
     db.refresh(rental_request)
     return get_rental_or_404(rental_request.id, db)
@@ -222,6 +219,9 @@ def cancel_rental_request(
             detail="Only pending or accepted requests can be cancelled",
         )
 
+    if rental_request.status == RentalStatus.ACCEPTED:
+        if rental_request.equipment.listing_mode == ListingMode.SELL:
+            rental_request.equipment.availability_status = "available"
     rental_request.status = RentalStatus.CANCELLED
     db.commit()
     db.refresh(rental_request)
