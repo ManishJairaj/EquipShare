@@ -4,7 +4,7 @@ const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 2,
 }).format(Number(value))
 
-function EquipmentCard({ item }) {
+function EquipmentCard({ item, onRentClick }) {
   const isRental = item.listing_mode === 'rent'
   const ownerDisplay = item.owner?.username
     ? `@${item.owner.username}`
@@ -65,7 +65,7 @@ function EquipmentCard({ item }) {
           </div>
 
           <button
-            onClick={() => alert(`${item.name} is listed by ${ownerDisplay}.`)}
+            onClick={isRental && onRentClick ? onRentClick : () => alert(`${item.name} is listed by ${ownerDisplay}.`)}
             className="px-3.5 py-2 text-xs font-bold text-white bg-slate-950 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10"
           >
             {isRental ? 'Rent Now' : 'View Sale'}

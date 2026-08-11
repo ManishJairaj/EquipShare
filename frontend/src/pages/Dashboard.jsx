@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api from '../services/api'
+import { formatApiError } from '../utils/errorFormatter'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -15,8 +16,12 @@ function Dashboard() {
   
   const [user, setUser] = useState(null)
   const [myEquipment, setMyEquipment] = useState([])
+  const [incomingRequests, setIncomingRequests] = useState([])
+  const [outgoingRequests, setOutgoingRequests] = useState([])
+  
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activeTab, setActiveTab] = useState('listings') // 'listings' or 'rentals'
   
   // Form states for adding/editing equipment
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -33,6 +38,9 @@ function Dashboard() {
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  // Rentals action loading states
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+
   const fetchData = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -48,6 +56,19 @@ function Dashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setMyEquipment(equipRes.data)
+
+      // Get Incoming Rentals
+      const incomingRes = await api.get('/rentals/incoming', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setIncomingRequests(incomingRes.data)
+
+      // Get Outgoing Rentals
+      const outgoingRes = await api.get('/rentals/my-requests', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setOutgoingRequests(outgoingRes.data)
+
     } catch (err) {
       console.error(err)
       setError('Session expired or authentication failed. Please login again.')
@@ -141,7 +162,7 @@ function Dashboard() {
 
       setIsModalOpen(false)
     } catch (err) {
-      setFormError(err.response?.data?.detail || 'Failed to save equipment. Check database types.')
+      setFormError(formatApiError(err))
     } finally {
       setSubmitting(false)
     }
@@ -159,6 +180,87 @@ function Dashboard() {
       console.error(err)
       alert('Failed to delete equipment listing.')
     }
+  }
+
+  // Accept Rental Request
+  const handleAcceptRental = async (reqId) => {
+    setActionLoadingId(reqId)
+    try {
+      const res = await api.patch(`/rentals/${reqId}/accept`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      // Update local state
+      setIncomingRequests(incomingRequests.map(req => req.id === reqId ? res.data : req))
+    } catch (err) {
+      alert(formatApiError(err))
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  // Reject Rental Request
+  const handleRejectRental = async (reqId) => {
+    if (!window.confirm('Are you sure you want to reject this rental request?')) return
+    setActionLoadingId(reqId)
+    try {
+      const res = await api.patch(`/rentals/${reqId}/reject`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      // Update local state
+      setIncomingRequests(incomingRequests.map(req => req.id === reqId ? res.data : req))
+    } catch (err) {
+      alert(formatApiError(err))
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  // Cancel Rental Request
+  const handleCancelRental = async (reqId) => {
+    if (!window.confirm('Are you sure you want to cancel your rental request?')) return
+    setActionLoadingId(reqId)
+    try {
+      const res = await api.patch(`/rentals/${reqId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      // Update local state
+      setOutgoingRequests(outgoingRequests.map(req => req.id === reqId ? res.data : req))
+    } catch (err) {
+      alert(formatApiError(err))
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  // Helper to render status badges
+  const renderStatusBadge = (status) => {
+    const styles = {
+      pending: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/30',
+      accepted: 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/30',
+      rejected: 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border border-rose-200/30',
+      cancelled: 'bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200/30',
+      completed: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-200/30'
+    }
+
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${styles[status] || styles.pending}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${
+          status === 'accepted' ? 'bg-emerald-500' :
+          status === 'pending' ? 'bg-amber-500' :
+          status === 'rejected' ? 'bg-rose-500' : 'bg-slate-400'
+        }`}></span>
+        {status}
+      </span>
+    )
+  }
+
+  // Calculate rental cost helper
+  const calculateTotalCost = (start, end, price) => {
+    const startDate = new Date(start)
+    const endDate = new Date(end)
+    const diffTime = endDate - startDate
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+    return formatPrice(days * price)
   }
 
   // Calculated Stats
@@ -244,102 +346,268 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Listings Header */}
-            <h2 className="text-xl font-bold text-slate-950 dark:text-white mb-6">Your Equipment Listings</h2>
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-slate-200 dark:border-slate-800 mb-8">
+              <button
+                onClick={() => setActiveTab('listings')}
+                className={`py-3.5 px-6 font-bold text-sm border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'listings'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                My Listings ({myEquipment.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('rentals')}
+                className={`py-3.5 px-6 font-bold text-sm border-b-2 transition-all cursor-pointer ${
+                  activeTab === 'rentals'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                }`}
+              >
+                Rentals & Bookings ({incomingRequests.length + outgoingRequests.length})
+              </button>
+            </div>
 
-            {myEquipment.length === 0 ? (
-              <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/30 shadow-sm">
-                <svg className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">You haven't listed any equipment yet</h3>
-                <p className="text-slate-500 mt-1 max-w-sm mx-auto text-sm">
-                  Click the button above to upload cameras, calculators, lab gear, or textbooks for sharing.
-                </p>
-              </div>
-            ) : (
-              /* Table Layout */
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                        <th className="px-6 py-4">Equipment Info</th>
-                        <th className="px-6 py-4">Category</th>
-                        <th className="px-6 py-4">Listing Type</th>
-                        <th className="px-6 py-4">Condition</th>
-                        <th className="px-6 py-4">Availability</th>
-                        <th className="px-6 py-4 text-right">Price</th>
-                        <th className="px-6 py-4 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                      {myEquipment.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
-                          <td className="px-6 py-4">
-                            <span className="font-bold text-slate-900 dark:text-white block text-sm">{item.name}</span>
-                            <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
-                              {item.description || 'No description'}
-                            </span>
-                            <span className="text-xs text-indigo-500 dark:text-indigo-400 mt-1 block">
-                              Listed by {item.owner?.username ? `@${item.owner.username}` : item.owner?.name || 'Unknown'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm font-medium">{item.category}</td>
-                          <td className="px-6 py-4">
-                            <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full ${
-                              item.listing_mode === 'rent'
-                                ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
-                                : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
-                            }`}>
-                              {item.listing_mode === 'rent' ? 'FOR RENT' : 'FOR SALE'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 capitalize">
-                              {item.condition}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                              item.availability_status === 'available'
-                                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-slate-100 dark:bg-slate-900 text-slate-500'
-                            }`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${
-                                item.availability_status === 'available' ? 'bg-emerald-500' : 'bg-slate-400'
-                              }`}></span>
-                              {item.availability_status === 'available' ? 'Available' : 'Reserved'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white text-sm">
-                            {formatPrice(item.price)}
-                            {item.listing_mode === 'rent' && <span className="text-xs text-slate-400 font-normal">/day</span>}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="inline-flex gap-2">
-                              <button
-                                onClick={() => openEditModal(item)}
-                                className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
-                              >
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(item.id, item.name)}
-                                className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                              >
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            {/* TAB CONTENT: Listings */}
+            {activeTab === 'listings' && (
+              <>
+                {myEquipment.length === 0 ? (
+                  <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/30 shadow-sm">
+                    <svg className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">You haven't listed any equipment yet</h3>
+                    <p className="text-slate-500 mt-1 max-w-sm mx-auto text-sm">
+                      Click the button above to upload cameras, calculators, lab gear, or textbooks for sharing.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden animate-fade-in">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            <th className="px-6 py-4">Equipment Info</th>
+                            <th className="px-6 py-4">Category</th>
+                            <th className="px-6 py-4">Listing Type</th>
+                            <th className="px-6 py-4">Condition</th>
+                            <th className="px-6 py-4">Availability</th>
+                            <th className="px-6 py-4 text-right">Price</th>
+                            <th className="px-6 py-4 text-center">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                          {myEquipment.map((item) => (
+                            <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
+                              <td className="px-6 py-4">
+                                <span className="font-bold text-slate-900 dark:text-white block text-sm">{item.name}</span>
+                                <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
+                                  {item.description || 'No description'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-sm font-medium">{item.category}</td>
+                              <td className="px-6 py-4">
+                                <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full ${
+                                  item.listing_mode === 'rent'
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
+                                    : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
+                                }`}>
+                                  {item.listing_mode === 'rent' ? 'FOR RENT' : 'FOR SALE'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 capitalize">
+                                  {item.condition}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                                  item.availability_status === 'available'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-slate-100 dark:bg-slate-900 text-slate-500'
+                                }`}>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${
+                                    item.availability_status === 'available' ? 'bg-emerald-500' : 'bg-slate-400'
+                                  }`}></span>
+                                  {item.availability_status === 'available' ? 'Available' : 'Reserved'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white text-sm">
+                                {formatPrice(item.price)}
+                                {item.listing_mode === 'rent' && <span className="text-xs text-slate-400 font-normal">/day</span>}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                <div className="inline-flex gap-2">
+                                  <button
+                                    onClick={() => openEditModal(item)}
+                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(item.id, item.name)}
+                                    className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* TAB CONTENT: Rentals */}
+            {activeTab === 'rentals' && (
+              <div className="space-y-10 animate-fade-in">
+                {/* Section 1: Incoming Requests */}
+                <div>
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-slate-950 dark:text-white">Incoming Rental Requests (Lending)</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Requests made by other students to borrow your listed items.</p>
+                  </div>
+
+                  {incomingRequests.length === 0 ? (
+                    <div className="py-12 text-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/30 text-sm text-slate-500">
+                      No incoming rental requests.
+                    </div>
+                  ) : (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              <th className="px-6 py-4">Equipment</th>
+                              <th className="px-6 py-4">Borrower</th>
+                              <th className="px-6 py-4">Rental Period</th>
+                              <th className="px-6 py-4 text-right">Est. Earnings</th>
+                              <th className="px-6 py-4 text-center">Status</th>
+                              <th className="px-6 py-4 text-center">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
+                            {incomingRequests.map((req) => (
+                              <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
+                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                                  {req.equipment.name}
+                                </td>
+                                <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">
+                                  {req.borrower.name}
+                                </td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                                  {req.start_date} to {req.end_date}
+                                </td>
+                                <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
+                                  {calculateTotalCost(req.start_date, req.end_date, req.equipment.price || req.price)}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {renderStatusBadge(req.status)}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {req.status === 'pending' ? (
+                                    <div className="inline-flex gap-2">
+                                      <button
+                                        onClick={() => handleAcceptRental(req.id)}
+                                        disabled={actionLoadingId === req.id}
+                                        className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                      >
+                                        Accept
+                                      </button>
+                                      <button
+                                        onClick={() => handleRejectRental(req.id)}
+                                        disabled={actionLoadingId === req.id}
+                                        className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-lg shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs font-medium text-slate-400">No actions</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 2: Outgoing Requests */}
+                <div>
+                  <div className="mb-4">
+                    <h3 className="text-lg font-bold text-slate-950 dark:text-white">Your Rental Requests (Borrowing)</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Requests you made to borrow other students' equipment.</p>
+                  </div>
+
+                  {outgoingRequests.length === 0 ? (
+                    <div className="py-12 text-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/50 dark:border-slate-700/30 text-sm text-slate-500">
+                      No outgoing rental requests.
+                    </div>
+                  ) : (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              <th className="px-6 py-4">Equipment</th>
+                              <th className="px-6 py-4">Owner</th>
+                              <th className="px-6 py-4">Rental Period</th>
+                              <th className="px-6 py-4 text-right">Est. Cost</th>
+                              <th className="px-6 py-4 text-center">Status</th>
+                              <th className="px-6 py-4 text-center">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
+                            {outgoingRequests.map((req) => (
+                              <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
+                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                                  {req.equipment.name}
+                                </td>
+                                <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">
+                                  {req.equipment.owner?.name || 'Owner'}
+                                </td>
+                                <td className="px-6 py-4 text-xs font-medium text-slate-500">
+                                  {req.start_date} to {req.end_date}
+                                </td>
+                                <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
+                                  {calculateTotalCost(req.start_date, req.end_date, req.equipment.price || req.price)}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {renderStatusBadge(req.status)}
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                  {(req.status === 'pending' || req.status === 'accepted') ? (
+                                    <button
+                                      onClick={() => handleCancelRental(req.id)}
+                                      disabled={actionLoadingId === req.id}
+                                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-950 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 transition-all disabled:opacity-50 cursor-pointer"
+                                    >
+                                      Cancel Request
+                                    </button>
+                                  ) : (
+                                    <span className="text-xs font-medium text-slate-400">No actions</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -470,7 +738,7 @@ function Dashboard() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                  className="flex-1 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-50 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
                 >
                   {submitting ? 'Saving...' : 'Save Listing'}
                 </button>

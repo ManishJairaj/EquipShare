@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api from '../services/api'
+import { formatApiError } from '../utils/errorFormatter'
 
 function Login() {
   const navigate = useNavigate()
@@ -48,7 +49,7 @@ function Login() {
       // Redirect to dashboard
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Incorrect email or password')
+      setError(formatApiError(err))
     } finally {
       setLoading(false)
     }
@@ -82,16 +83,16 @@ function Login() {
           <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Email Address
+                Username or Email
               </label>
               <input
                 id="email"
                 name="email"
-                type="email"
+                type="text"
                 value={formData.email}
                 onChange={handleChange}
                 disabled={loading}
-                placeholder="your.email@college.edu"
+                placeholder="your.email@college.edu or username"
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
               />
             </div>
