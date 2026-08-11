@@ -1,14 +1,33 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import EquipmentCard from '../components/EquipmentCard.jsx'
 import api from '../services/api'
+import { formatApiError } from '../utils/errorFormatter'
+
+const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  maximumFractionDigits: 2,
+}).format(Number(value))
 
 function Home() {
+  const navigate = useNavigate()
+  const token = localStorage.getItem('token')
+
   const [equipment, setEquipment] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  // Booking modal states
+  const [bookingItem, setBookingItem] = useState(null)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [bookingError, setBookingError] = useState('')
+  const [bookingSuccess, setBookingSuccess] = useState(false)
+  const [bookingSubmitting, setBookingSubmitting] = useState(false)
 
   useEffect(() => {
     fetchEquipment()
@@ -38,6 +57,74 @@ function Home() {
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory
     return matchesSearch && matchesCategory
   })
+
+  // Handle opening booking modal
+  const handleRentClick = (item) => {
+    if (!token) {
+      navigate('/login')
+      return
+    }
+    setBookingItem(item)
+    // Set default dates: start tomorrow, end the day after
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dayAfter = new Date()
+    dayAfter.setDate(dayAfter.getDate() + 2)
+    
+    setStartDate(tomorrow.toISOString().split('T')[0])
+    setEndDate(dayAfter.toISOString().split('T')[0])
+    setBookingError('')
+    setBookingSuccess(false)
+  }
+
+  // Calculate rental cost
+  const calculateDays = () => {
+    if (!startDate || !endDate) return 0
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const diffTime = end - start
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // inclusive of both dates
+    return diffDays > 0 ? diffDays : 0
+  }
+
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault()
+    if (!startDate || !endDate) {
+      setBookingError('Please select both start and end dates.')
+      return
+    }
+
+    const days = calculateDays()
+    if (days <= 0) {
+      setBookingError('End date must be on or after start date.')
+      return
+    }
+
+    setBookingSubmitting(true)
+    setBookingError('')
+    setBookingSuccess(false)
+
+    try {
+      await api.post('/rentals', {
+        equipment_id: bookingItem.id,
+        start_date: startDate,
+        end_date: endDate
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      setBookingSuccess(true)
+      setTimeout(() => {
+        setBookingItem(null)
+        setBookingSuccess(false)
+        navigate('/dashboard')
+      }, 1500)
+    } catch (err) {
+      setBookingError(formatApiError(err))
+    } finally {
+      setBookingSubmitting(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
@@ -124,7 +211,7 @@ function Home() {
             {error}
           </div>
         ) : filteredEquipment.length === 0 ? (
-          <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/30 shadow-sm">
+          <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/55 dark:border-slate-700/30 shadow-sm">
             <svg className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
@@ -137,11 +224,107 @@ function Home() {
           /* Equipment Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredEquipment.map((item) => (
-              <EquipmentCard key={item.id} item={item} />
+              <EquipmentCard 
+                key={item.id} 
+                item={item} 
+                onRentClick={() => handleRentClick(item)}
+              />
             ))}
           </div>
         )}
       </main>
+
+      {/* Booking Modal */}
+      {bookingItem && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl relative animate-scale-up">
+            <h3 className="text-2xl font-extrabold text-slate-950 dark:text-white mb-2">
+              Request Rental
+            </h3>
+            <p className="text-slate-500 text-sm mb-6">
+              You are requesting to rent <span className="font-semibold text-slate-900 dark:text-white">{bookingItem.name}</span>
+            </p>
+
+            {bookingError && (
+              <div className="mb-5 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-sm font-semibold">
+                {bookingError}
+              </div>
+            )}
+
+            {bookingSuccess && (
+              <div className="mb-5 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-sm font-semibold">
+                Rental request submitted successfully! Redirecting...
+              </div>
+            )}
+
+            <form onSubmit={handleBookingSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Start Date</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    setBookingError('')
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">End Date</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value)
+                    setBookingError('')
+                  }}
+                  min={startDate || new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                />
+              </div>
+
+              {/* Price Calculation details */}
+              {startDate && endDate && calculateDays() > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-900/60 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 space-y-2 mt-4 text-sm font-medium text-slate-600 dark:text-slate-400">
+                  <div className="flex justify-between">
+                    <span>Price per Day:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{formatPrice(bookingItem.price)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Days:</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">{calculateDays()} days</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800 font-extrabold text-base text-slate-950 dark:text-white">
+                    <span>Estimated Total:</span>
+                    <span>{formatPrice(calculateDays() * bookingItem.price)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-4 mt-6 pt-4 border-t border-slate-100 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => setBookingItem(null)}
+                  disabled={bookingSubmitting || bookingSuccess}
+                  className="flex-1 py-3 text-sm font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-all cursor-pointer text-center disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={bookingSubmitting || bookingSuccess}
+                  className="flex-1 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                >
+                  {bookingSubmitting ? 'Requesting...' : 'Request Rent'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

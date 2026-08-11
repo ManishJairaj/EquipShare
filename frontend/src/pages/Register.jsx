@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api from '../services/api'
+import { formatApiError } from '../utils/errorFormatter'
 
 function Register() {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -25,7 +27,7 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.name || !formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       setError('Please fill in all fields')
       return
     }
@@ -35,8 +37,14 @@ function Register() {
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long')
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long')
+      return
+    }
+
+    const usernameRegex = /^[A-Za-z0-9_]+$/
+    if (!usernameRegex.test(formData.username)) {
+      setError('Username can only contain alphanumeric characters and underscores')
       return
     }
 
@@ -45,6 +53,7 @@ function Register() {
     try {
       await api.post('/auth/register', {
         name: formData.name,
+        username: formData.username,
         email: formData.email,
         password: formData.password
       })
@@ -53,7 +62,7 @@ function Register() {
         navigate('/login')
       }, 2000)
     } catch (err) {
-      setError(err.response?.data?.detail || 'An error occurred during registration')
+      setError(formatApiError(err))
     } finally {
       setLoading(false)
     }
@@ -108,6 +117,22 @@ function Register() {
             </div>
 
             <div>
+              <label htmlFor="username" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleChange}
+                disabled={loading || success}
+                placeholder="johndoe123"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div>
               <label htmlFor="email" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Email Address
               </label>
@@ -125,7 +150,7 @@ function Register() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Password
+                Password (min 8 chars)
               </label>
               <input
                 id="password"
