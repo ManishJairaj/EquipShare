@@ -1,7 +1,5 @@
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
-
 
 class UserCreate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
@@ -15,7 +13,6 @@ class UserCreate(BaseModel):
     @classmethod
     def normalize_username(cls, username: str) -> str:
         return username.lower()
-
 
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)

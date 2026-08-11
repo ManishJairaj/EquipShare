@@ -1,5 +1,9 @@
 from datetime import date, datetime
-from enum import StrEnum
+from enum import Enum
+
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+        return str(self.value)
 
 from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
