@@ -1,10 +1,6 @@
 from datetime import date, datetime
-<<<<<<< HEAD
-from typing_extensions import Self
-=======
 from decimal import Decimal
-from typing import Self
->>>>>>> main
+from typing_extensions import Self
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
