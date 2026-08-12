@@ -2,13 +2,14 @@ from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Numeric, String, Text, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.rental_request import RentalRequest
+    from app.models.review import Review
 
 
 class Equipment(Base):
@@ -32,6 +33,7 @@ class Equipment(Base):
     availability_status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="available", server_default="available"
     )
+    image_urls: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list, server_default="[]")
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -44,5 +46,8 @@ class Equipment(Base):
 
     owner: Mapped["User"] = relationship(back_populates="equipment")
     rental_requests: Mapped[list["RentalRequest"]] = relationship(
+        back_populates="equipment", cascade="all, delete-orphan"
+    )
+    reviews: Mapped[list["Review"]] = relationship(
         back_populates="equipment", cascade="all, delete-orphan"
     )

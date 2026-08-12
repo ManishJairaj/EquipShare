@@ -3,6 +3,7 @@ from decimal import Decimal
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.review import ReviewOut
 
 
 class StrEnum(str, Enum):
@@ -52,6 +53,7 @@ class EquipmentBase(BaseModel):
     listing_mode: ListingMode
     price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     availability_status: AvailabilityStatus = AvailabilityStatus.AVAILABLE
+    image_urls: list[str] = Field(default_factory=list)
 
 
 class EquipmentCreate(EquipmentBase):
@@ -68,6 +70,7 @@ class EquipmentUpdate(BaseModel):
     listing_mode: ListingMode | None = None
     price: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
     availability_status: AvailabilityStatus | None = None
+    image_urls: list[str] | None = None
 
 
 class RentalRangeOut(BaseModel):
@@ -85,6 +88,7 @@ class EquipmentOut(EquipmentBase):
     owner_id: int
     owner: OwnerSummary
     rental_requests: list[RentalRangeOut] = []
+    reviews: list[ReviewOut] = []
     created_at: datetime
     updated_at: datetime
 
