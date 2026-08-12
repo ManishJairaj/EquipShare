@@ -1,45 +1,28 @@
-import os
 from collections.abc import Callable, Generator
 from datetime import date, timedelta
-from pathlib import Path
 
 import pytest
-from dotenv import dotenv_values
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from scripts.test_database import get_test_database_url
 
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-ENV_VALUES = dotenv_values(BACKEND_DIR / ".env")
 REQUIRED_TABLES = {"users", "equipment", "rental_requests", "alembic_version"}
 DEFAULT_PASSWORD = "ValidTestPassword!42"
 
 
-def _configured_value(name: str) -> str | None:
-    value = os.getenv(name) or ENV_VALUES.get(name)
-    return str(value) if value else None
-
-
 def _test_database_url() -> str:
-    test_url = _configured_value("TEST_DATABASE_URL")
-    if not test_url:
-        pytest.skip(
-            "Database integration tests require a dedicated PostgreSQL "
-            "TEST_DATABASE_URL; the development DATABASE_URL is never used."
-        )
+    try:
+        return get_test_database_url()
+    except (RuntimeError, ValueError) as exc:
+        raise pytest.UsageError(f"Refusing to run tests: {exc}") from None
 
-    development_url = _configured_value("DATABASE_URL")
-    if development_url and make_url(test_url) == make_url(development_url):
-        pytest.fail(
-            "TEST_DATABASE_URL must not point to the same database as DATABASE_URL."
-        )
 
-    parsed_url = make_url(test_url)
-    if parsed_url.get_backend_name() != "postgresql":
-        pytest.fail("TEST_DATABASE_URL must use PostgreSQL, not SQLite or another database.")
-    return test_url
+def pytest_sessionstart(session: pytest.Session) -> None:
+    """Abort before collection unless the dedicated test URL passes all guards."""
+    _test_database_url()
 
 
 @pytest.fixture(scope="session")
@@ -58,7 +41,7 @@ def test_engine() -> Generator[Engine, None, None]:
     missing_tables = REQUIRED_TABLES - existing_tables
     if missing_tables:
         engine.dispose()
-        pytest.skip(
+        pytest.fail(
             "The dedicated test database is not migrated. Run Alembic upgrade head "
             "against TEST_DATABASE_URL before running integration tests."
         )

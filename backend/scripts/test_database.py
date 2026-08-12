@@ -10,7 +10,8 @@ from sqlalchemy.engine import make_url
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
-def configure_test_database() -> None:
+def get_test_database_url() -> str:
+    """Return a validated, dedicated PostgreSQL test URL without exposing it."""
     values = dotenv_values(BACKEND_DIR / ".env")
     test_database_url = os.getenv("TEST_DATABASE_URL") or values.get(
         "TEST_DATABASE_URL"
@@ -32,4 +33,9 @@ def configure_test_database() -> None:
     if make_url(test_database_url).get_backend_name() != "postgresql":
         raise RuntimeError("TEST_DATABASE_URL must use PostgreSQL")
 
-    os.environ["DATABASE_URL"] = str(test_database_url)
+    return str(test_database_url)
+
+
+def configure_test_database() -> None:
+    """Point this process at the validated test database for legacy scripts."""
+    os.environ["DATABASE_URL"] = get_test_database_url()

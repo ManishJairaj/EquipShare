@@ -103,8 +103,8 @@ python -m scripts.migrate_test_db
 pytest -v
 ```
 
-If `TEST_DATABASE_URL` is absent, the database integration tests are skipped.
-The fixture also refuses SQLite and refuses a test URL equal to `DATABASE_URL`.
+If `TEST_DATABASE_URL` is absent, pytest stops with a clear safety error. The
+fixture also refuses SQLite and refuses a test URL equal to `DATABASE_URL`.
 Each test runs inside an outer transaction that is rolled back afterward.
 
 Sale purchases currently reuse the rental-request table and action routes. A
