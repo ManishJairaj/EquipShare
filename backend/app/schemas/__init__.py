@@ -3,9 +3,11 @@ from app.schemas.equipment import (
     EquipmentCondition,
     EquipmentCreate,
     EquipmentOut,
+    EquipmentSort,
     EquipmentUpdate,
     ListingMode,
     OwnerSummary,
+    PaginatedEquipmentResponse,
 )
 from app.schemas.rental_request import (
     RentalBorrowerSummary,
@@ -21,9 +23,11 @@ __all__ = [
     "EquipmentCondition",
     "EquipmentCreate",
     "EquipmentOut",
+    "EquipmentSort",
     "EquipmentUpdate",
     "ListingMode",
     "OwnerSummary",
+    "PaginatedEquipmentResponse",
     "RentalBorrowerSummary",
     "RentalEquipmentSummary",
     "RentalRequestCreate",

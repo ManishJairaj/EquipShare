@@ -27,6 +27,13 @@ class ListingMode(StrEnum):
     SELL = "sell"
 
 
+class EquipmentSort(StrEnum):
+    NEWEST = "newest"
+    OLDEST = "oldest"
+    PRICE_ASC = "price_asc"
+    PRICE_DESC = "price_desc"
+
+
 class OwnerSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,3 +87,11 @@ class EquipmentOut(EquipmentBase):
     rental_requests: list[RentalRangeOut] = []
     created_at: datetime
     updated_at: datetime
+
+
+class PaginatedEquipmentResponse(BaseModel):
+    items: list[EquipmentOut]
+    page: int
+    limit: int
+    total: int
+    total_pages: int

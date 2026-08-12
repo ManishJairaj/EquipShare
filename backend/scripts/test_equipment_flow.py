@@ -117,11 +117,11 @@ def main() -> None:
                 "end_date": (future + timedelta(days=1)).isoformat(),
             },
         )
-        assert sale_rental.status_code == 400
+        assert sale_rental.status_code == 400, sale_rental.text
 
         all_equipment = client.get("/equipment")
         assert all_equipment.status_code == 200
-        returned_ids = {item["id"] for item in all_equipment.json()}
+        returned_ids = {item["id"] for item in all_equipment.json()["items"]}
         assert {equipment_a_id, equipment_b_id} <= returned_ids
 
         public_item = client.get(f"/equipment/{equipment_a_id}")
