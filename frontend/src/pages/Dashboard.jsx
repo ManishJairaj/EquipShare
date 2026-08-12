@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
@@ -33,10 +33,14 @@ function Dashboard() {
     condition: 'good',
     listing_mode: 'rent',
     price: '',
-    availability_status: 'available'
+    availability_status: 'available',
+    image_urls: []
   })
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadError, setUploadError] = useState('')
 
   // Rentals action loading states
   const [actionLoadingId, setActionLoadingId] = useState(null)
@@ -104,8 +108,11 @@ function Dashboard() {
       condition: 'good',
       listing_mode: 'rent',
       price: '',
-      availability_status: 'available'
+      availability_status: 'available',
+      image_urls: []
     })
+    setFormError('')
+    setUploadError('')
     setIsModalOpen(true)
   }
 
@@ -118,9 +125,58 @@ function Dashboard() {
       condition: item.condition,
       listing_mode: item.listing_mode,
       price: item.price,
-      availability_status: item.availability_status
+      availability_status: item.availability_status,
+      image_urls: item.image_urls || []
     })
+    setFormError('')
+    setUploadError('')
     setIsModalOpen(true)
+  }
+
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    const invalidFiles = files.filter(file => !file.type.startsWith('image/'))
+    if (invalidFiles.length > 0) {
+      setUploadError('Please select only valid image files.')
+      return
+    }
+
+    setUploadingImage(true)
+    setUploadError('')
+
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const uploadData = new FormData()
+        uploadData.append('file', file)
+        const res = await api.post('/equipment/upload', uploadData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`
+          }
+        })
+        return res.data.image_url
+      })
+
+      const uploadedUrls = await Promise.all(uploadPromises)
+      setFormData(prev => ({
+        ...prev,
+        image_urls: [...(prev.image_urls || []), ...uploadedUrls]
+      }))
+    } catch (err) {
+      console.error(err)
+      setUploadError('Failed to upload one or more images. Please try again.')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleRemoveImage = (indexToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      image_urls: prev.image_urls.filter((_, idx) => idx !== indexToRemove)
+    }))
   }
 
   const handleSubmit = async (e) => {
@@ -141,7 +197,8 @@ function Dashboard() {
         condition: formData.condition,
         listing_mode: formData.listing_mode,
         price: parseFloat(formData.price),
-        availability_status: formData.availability_status
+        availability_status: formData.availability_status,
+        image_urls: formData.image_urls || []
       }
 
       if (editingItem) {
@@ -420,7 +477,9 @@ function Dashboard() {
                           {myEquipment.map((item) => (
                             <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
                               <td className="px-6 py-4">
-                                <span className="font-bold text-slate-900 dark:text-white block text-sm">{item.name}</span>
+                                <Link to={`/equipment/${item.id}`} className="font-bold text-slate-900 dark:text-white block text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                  {item.name}
+                                </Link>
                                 <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
                                   {item.description || 'No description'}
                                 </span>
@@ -517,7 +576,9 @@ function Dashboard() {
                                     <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 rounded-md border border-indigo-200/20">
                                       {item.category}
                                     </span>
-                                    <h4 className="text-base font-extrabold text-slate-950 dark:text-white mt-1.5">{item.name}</h4>
+                                    <Link to={`/equipment/${item.id}`} className="text-base font-extrabold text-slate-950 dark:text-white mt-1.5 block hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                      {item.name}
+                                    </Link>
                                   </div>
                                   <span className="text-xs font-bold text-slate-400">
                                     {itemBookings.length} {itemBookings.length === 1 ? 'booking' : 'bookings'}
@@ -590,8 +651,10 @@ function Dashboard() {
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
                             {incomingRequests.map((req) => (
                               <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
-                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                                  {req.equipment.name}
+                                <td className="px-6 py-4">
+                                  <Link to={`/equipment/${req.equipment.id}`} className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                    {req.equipment.name}
+                                  </Link>
                                 </td>
                                 <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">
                                   {req.borrower.name}
@@ -670,8 +733,10 @@ function Dashboard() {
                           <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-sm">
                             {outgoingRequests.map((req) => (
                               <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
-                                <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                                  {req.equipment.name}
+                                <td className="px-6 py-4">
+                                  <Link to={`/equipment/${req.equipment.id}`} className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                    {req.equipment.name}
+                                  </Link>
                                 </td>
                                 <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">
                                   {req.equipment.owner?.name || 'Owner'}
@@ -816,6 +881,71 @@ function Dashboard() {
                   placeholder={formData.listing_mode === 'rent' ? 'e.g. 500' : 'e.g. 15000'}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                 />
+              </div>
+
+              {/* Product Image Uploader */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Product Image (Optional)</label>
+                {uploadError && (
+                  <div className="mb-2 text-xs font-bold text-rose-600 dark:text-rose-400">
+                    {uploadError}
+                  </div>
+                )}
+                {/* Thumbnails Grid */}
+                {formData.image_urls && formData.image_urls.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    {formData.image_urls.map((url, idx) => (
+                      <div key={idx} className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 group aspect-video">
+                        <img
+                          src={url.startsWith('http') ? url : `http://localhost:8000${url}`}
+                          alt={`Product preview ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-all cursor-pointer"
+                            title="Remove Image"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload Area */}
+                <div className="relative rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-500/50 dark:hover:border-indigo-400/50 transition-all bg-slate-50 dark:bg-slate-900 p-6 text-center cursor-pointer flex flex-col items-center justify-center gap-2 group min-h-[120px]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    disabled={uploadingImage}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <svg className="animate-spin h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span className="text-xs text-slate-400 font-bold">Uploading images...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <svg className="h-8 w-8 text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Click or drag images here to upload multiple</span>
+                      <span className="text-[10px] text-slate-400">PNG, JPG, or JPEG (Select one or more)</span>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div>

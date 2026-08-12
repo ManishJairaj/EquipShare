@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import EquipmentCard from '../components/EquipmentCard.jsx'
@@ -16,6 +16,7 @@ const DEFAULT_CATEGORIES = ['Cameras', 'Electronics', 'Lab', 'Sports', 'Tools', 
 function Home() {
   const navigate = useNavigate()
   const token = localStorage.getItem('token')
+  const catalogRef = useRef(null)
 
   const [equipment, setEquipment] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
@@ -32,7 +33,7 @@ function Home() {
 
   // Filter and search states
   const [searchQuery, setSearchQuery] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [searchParam, setSearchParam] = useState('')
 
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [categories, setCategories] = useState(['All'])
@@ -94,14 +95,6 @@ function Home() {
     fetchUser()
   }, [token])
 
-  // Debouncing search query (300ms)
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-    }, 300)
-    return () => clearTimeout(handler)
-  }, [searchQuery])
-
   // Debouncing minPrice (300ms)
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -122,7 +115,7 @@ function Home() {
   useEffect(() => {
     setPage(1)
   }, [
-    debouncedSearch,
+    searchParam,
     selectedCategory,
     listingMode,
     condition,
@@ -131,6 +124,13 @@ function Home() {
     debouncedMaxPrice,
     sortBy,
   ])
+
+  // Auto-scroll to catalog results when search query is entered
+  useEffect(() => {
+    if (searchParam.trim() && catalogRef.current) {
+      catalogRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [searchParam])
 
   // Main fetch hook using server-side queries
   useEffect(() => {
@@ -144,8 +144,8 @@ function Home() {
           sort: sortBy,
         }
 
-        if (debouncedSearch.trim()) {
-          params.search = debouncedSearch.trim()
+        if (searchParam.trim()) {
+          params.search = searchParam.trim()
         }
         if (selectedCategory !== 'All') {
           params.category = selectedCategory
@@ -194,7 +194,7 @@ function Home() {
     fetchEquipment()
   }, [
     page,
-    debouncedSearch,
+    searchParam,
     selectedCategory,
     listingMode,
     condition,
@@ -262,6 +262,7 @@ function Home() {
 
   const handleClearFilters = () => {
     setSearchQuery('')
+    setSearchParam('')
     setSelectedCategory('All')
     setListingMode('all')
     setCondition('all')
@@ -273,7 +274,7 @@ function Home() {
   }
 
   const hasActiveFilters = 
-    searchQuery !== '' ||
+    searchParam !== '' ||
     selectedCategory !== 'All' ||
     listingMode !== 'all' ||
     condition !== 'all' ||
@@ -403,7 +404,13 @@ function Home() {
 
           {/* Search bar inside hero */}
           <div className="mt-10 max-w-xl mx-auto">
-            <div className="relative flex items-center bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-200/55 dark:border-slate-700/50">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                setSearchParam(searchQuery)
+              }}
+              className="relative flex items-center bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-200/55 dark:border-slate-700/50"
+            >
               <div className="pl-3 pr-2 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -417,8 +424,12 @@ function Home() {
                 className="w-full py-2.5 px-2 bg-transparent text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none text-sm font-medium"
               />
               {searchQuery && (
-                <button 
-                  onClick={() => setSearchQuery('')}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setSearchParam('')
+                  }}
                   className="pr-3 text-slate-450 hover:text-slate-650 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -426,13 +437,19 @@ function Home() {
                   </svg>
                 </button>
               )}
-            </div>
+              <button
+                type="submit"
+                className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10"
+              >
+                Search
+              </button>
+            </form>
           </div>
         </div>
       </section>
 
       {/* Main Catalog Section */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main ref={catalogRef} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Filter bar */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div>
