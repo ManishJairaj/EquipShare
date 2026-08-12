@@ -19,6 +19,12 @@ function Home() {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  })
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('All')
 
@@ -108,8 +114,28 @@ function Home() {
     setError('')
     try {
       const res = await api.get('/equipment')
-      setEquipment(res.data)
+      const responseData = res.data
+      const items = Array.isArray(responseData?.items)
+        ? responseData.items
+        : Array.isArray(responseData)
+          ? responseData
+          : null
+
+      if (items === null) {
+        console.error('Unexpected GET /equipment response shape', responseData)
+        throw new Error('Unexpected equipment response from the server')
+      }
+
+      setEquipment(items)
+      setPagination({
+        page: Number(responseData?.page ?? 1),
+        limit: Number(responseData?.limit ?? items.length),
+        total: Number(responseData?.total ?? items.length),
+        totalPages: Number(responseData?.total_pages ?? (items.length ? 1 : 0)),
+      })
     } catch (err) {
+      setEquipment([])
+      setPagination({ page: 1, limit: 20, total: 0, totalPages: 0 })
       setError('Failed to fetch equipment listings.')
       console.error(err)
     } finally {
@@ -118,7 +144,10 @@ function Home() {
   }
 
   // Get unique categories for filter
-  const categories = ['All', ...new Set(equipment.map(item => item.category))]
+  const categories = [
+    'All',
+    ...new Set(equipment.map(item => item.category).filter(Boolean)),
+  ]
 
   // Filter listings based on search and category
   const filteredEquipment = equipment.filter(item => {
@@ -273,7 +302,9 @@ function Home() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-950 dark:text-white">Available Equipment</h2>
-            <p className="text-sm text-slate-500 mt-1">Browse and filter campus listings</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Browse and filter {pagination.total} campus listings
+            </p>
           </div>
           
           {/* Category Tabs */}

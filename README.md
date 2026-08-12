@@ -82,6 +82,36 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
+## Backend tests
+
+Tests never use `DATABASE_URL`. Configure a separate PostgreSQL database in
+`backend/.env` before running database integration tests:
+
+```env
+TEST_DATABASE_URL=postgresql+psycopg://username:password@test-host:5432/postgres
+```
+
+Install the development dependencies and migrate only that dedicated test
+database. The migration helper reads `TEST_DATABASE_URL`, verifies that it is
+PostgreSQL and differs from `DATABASE_URL`, and does not display either URL:
+
+```bash
+cd backend
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m scripts.migrate_test_db
+pytest -v
+```
+
+If `TEST_DATABASE_URL` is absent, the database integration tests are skipped.
+The fixture also refuses SQLite and refuses a test URL equal to `DATABASE_URL`.
+Each test runs inside an outer transaction that is rolled back afterward.
+
+Sale purchases currently reuse the rental-request table and action routes. A
+same-day request for a `sell` listing is treated as a purchase request; future
+date ranges are rejected for sale listings. A dedicated purchase-request type or
+table would make this distinction more explicit in a future backend revision.
+
 After activating the backend virtual environment, verify the connection with:
 
 ```bash
@@ -110,7 +140,9 @@ Registration requires a unique username and email. Usernames are lowercase,
 ## Equipment API
 
 - `POST /equipment` creates a listing owned by the authenticated user.
-- `GET /equipment` lists all equipment publicly.
+- `GET /equipment` lists equipment publicly with search, filters, sorting, and
+  page-based pagination. Its response contains `items`, `page`, `limit`, `total`,
+  and `total_pages`.
 - `GET /equipment/me` lists the authenticated user's equipment.
 - `GET /equipment/{equipment_id}` returns one public listing.
 - `PATCH /equipment/{equipment_id}` updates an owned listing.

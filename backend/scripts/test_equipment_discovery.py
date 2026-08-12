@@ -1,5 +1,9 @@
 from uuid import uuid4
 
+from scripts.test_database import configure_test_database
+
+configure_test_database()
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 

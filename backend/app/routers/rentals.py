@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -68,6 +69,14 @@ def create_rental_request(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot request your own equipment",
+        )
+    if equipment.listing_mode == ListingMode.SELL and (
+        request_data.start_date != date.today()
+        or request_data.end_date != date.today()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Sale listings accept purchase requests only, without rental dates",
         )
     if equipment.availability_status != AvailabilityStatus.AVAILABLE:
         raise HTTPException(
