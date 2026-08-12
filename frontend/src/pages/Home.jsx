@@ -11,6 +11,8 @@ const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 2,
 }).format(Number(value))
 
+const DEFAULT_CATEGORIES = ['Cameras', 'Electronics', 'Lab', 'Sports', 'Tools', 'Calculators']
+
 function Home() {
   const navigate = useNavigate()
   const token = localStorage.getItem('token')
@@ -19,14 +21,36 @@ function Home() {
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Pagination state (backend response metadata)
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 20,
+    limit: 12,
     total: 0,
     totalPages: 0,
   })
+
+  // Filter and search states
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [categories, setCategories] = useState(['All'])
+
+  const [listingMode, setListingMode] = useState('all') // 'all', 'rent', 'sell'
+  const [condition, setCondition] = useState('all') // 'all', 'new', 'excellent', 'good', 'fair'
+  const [availabilityStatus, setAvailabilityStatus] = useState('all') // 'all', 'available', 'unavailable'
+
+  const [minPrice, setMinPrice] = useState('')
+  const [debouncedMinPrice, setDebouncedMinPrice] = useState('')
+
+  const [maxPrice, setMaxPrice] = useState('')
+  const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('')
+
+  const [sortBy, setSortBy] = useState('newest') // 'newest', 'oldest', 'price_asc', 'price_desc'
+  const [page, setPage] = useState(1)
+
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Booking modal states
   const [bookingItem, setBookingItem] = useState(null)
@@ -36,6 +60,25 @@ function Home() {
   const [bookingSuccess, setBookingSuccess] = useState(false)
   const [bookingSubmitting, setBookingSubmitting] = useState(false)
 
+  // Fetch all unique categories once on mount
+  useEffect(() => {
+    const fetchAllCategories = async () => {
+      try {
+        const res = await api.get('/equipment', { params: { limit: 100 } })
+        const responseData = res.data
+        const items = responseData.items || []
+        const dbCategories = [...new Set(items.map(item => item.category).filter(Boolean))]
+        const combined = Array.from(new Set([...DEFAULT_CATEGORIES, ...dbCategories])).sort()
+        setCategories(['All', ...combined])
+      } catch (err) {
+        console.error('Failed to discover categories:', err)
+        setCategories(['All', ...DEFAULT_CATEGORIES])
+      }
+    }
+    fetchAllCategories()
+  }, [])
+
+  // Fetch current user details if token exists
   useEffect(() => {
     const fetchUser = async () => {
       if (!token) return
@@ -48,10 +91,118 @@ function Home() {
         console.error(err)
       }
     }
-
-    fetchEquipment()
     fetchUser()
   }, [token])
+
+  // Debouncing search query (300ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [searchQuery])
+
+  // Debouncing minPrice (300ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMinPrice(minPrice)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [minPrice])
+
+  // Debouncing maxPrice (300ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedMaxPrice(maxPrice)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [maxPrice])
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setPage(1)
+  }, [
+    debouncedSearch,
+    selectedCategory,
+    listingMode,
+    condition,
+    availabilityStatus,
+    debouncedMinPrice,
+    debouncedMaxPrice,
+    sortBy,
+  ])
+
+  // Main fetch hook using server-side queries
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const params = {
+          page,
+          limit: 12,
+          sort: sortBy,
+        }
+
+        if (debouncedSearch.trim()) {
+          params.search = debouncedSearch.trim()
+        }
+        if (selectedCategory !== 'All') {
+          params.category = selectedCategory
+        }
+        if (listingMode !== 'all') {
+          params.listing_mode = listingMode
+        }
+        if (condition !== 'all') {
+          params.condition = condition
+        }
+        if (availabilityStatus !== 'all') {
+          params.availability_status = availabilityStatus
+        }
+        
+        const min = parseFloat(debouncedMinPrice)
+        if (debouncedMinPrice.trim() && !isNaN(min) && min >= 0) {
+          params.min_price = min
+        }
+
+        const max = parseFloat(debouncedMaxPrice)
+        if (debouncedMaxPrice.trim() && !isNaN(max) && max >= 0) {
+          params.max_price = max
+        }
+
+        const res = await api.get('/equipment', { params })
+        const responseData = res.data
+        const items = responseData.items || []
+
+        setEquipment(items)
+        setPagination({
+          page: Number(responseData.page ?? 1),
+          limit: Number(responseData.limit ?? 12),
+          total: Number(responseData.total ?? items.length),
+          totalPages: Number(responseData.total_pages ?? 1),
+        })
+      } catch (err) {
+        setEquipment([])
+        setPagination({ page: 1, limit: 12, total: 0, totalPages: 1 })
+        setError('Failed to fetch equipment listings.')
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchEquipment()
+  }, [
+    page,
+    debouncedSearch,
+    selectedCategory,
+    listingMode,
+    condition,
+    availabilityStatus,
+    debouncedMinPrice,
+    debouncedMaxPrice,
+    sortBy,
+  ])
 
   // Real-time reservation date checker
   useEffect(() => {
@@ -109,53 +260,27 @@ function Home() {
     setBookingError('')
   }, [startDate, endDate, bookingItem])
 
-  const fetchEquipment = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const res = await api.get('/equipment')
-      const responseData = res.data
-      const items = Array.isArray(responseData?.items)
-        ? responseData.items
-        : Array.isArray(responseData)
-          ? responseData
-          : null
-
-      if (items === null) {
-        console.error('Unexpected GET /equipment response shape', responseData)
-        throw new Error('Unexpected equipment response from the server')
-      }
-
-      setEquipment(items)
-      setPagination({
-        page: Number(responseData?.page ?? 1),
-        limit: Number(responseData?.limit ?? items.length),
-        total: Number(responseData?.total ?? items.length),
-        totalPages: Number(responseData?.total_pages ?? (items.length ? 1 : 0)),
-      })
-    } catch (err) {
-      setEquipment([])
-      setPagination({ page: 1, limit: 20, total: 0, totalPages: 0 })
-      setError('Failed to fetch equipment listings.')
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
+  const handleClearFilters = () => {
+    setSearchQuery('')
+    setSelectedCategory('All')
+    setListingMode('all')
+    setCondition('all')
+    setAvailabilityStatus('all')
+    setMinPrice('')
+    setMaxPrice('')
+    setSortBy('newest')
+    setPage(1)
   }
 
-  // Get unique categories for filter
-  const categories = [
-    'All',
-    ...new Set(equipment.map(item => item.category).filter(Boolean)),
-  ]
-
-  // Filter listings based on search and category
-  const filteredEquipment = equipment.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
+  const hasActiveFilters = 
+    searchQuery !== '' ||
+    selectedCategory !== 'All' ||
+    listingMode !== 'all' ||
+    condition !== 'all' ||
+    availabilityStatus !== 'all' ||
+    minPrice !== '' ||
+    maxPrice !== '' ||
+    sortBy !== 'newest'
 
   // Handle opening booking modal
   const handleRentClick = (item) => {
@@ -291,6 +416,16 @@ function Home() {
                 placeholder="Search cameras, calculators, lab gear..."
                 className="w-full py-2.5 px-2 bg-transparent text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none text-sm font-medium"
               />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')}
+                  className="pr-3 text-slate-450 hover:text-slate-650 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -299,7 +434,7 @@ function Home() {
       {/* Main Catalog Section */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Filter bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10 pb-6 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-950 dark:text-white">Available Equipment</h2>
             <p className="text-sm text-slate-500 mt-1">
@@ -325,6 +460,162 @@ function Home() {
           </div>
         </div>
 
+        {/* Action & Filter controls */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          {/* Listing Mode Switcher */}
+          <div className="flex items-center bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-sm">
+            {[
+              { id: 'all', label: 'All Listings' },
+              { id: 'rent', label: 'For Rent' },
+              { id: 'sell', label: 'For Sale' }
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setListingMode(mode.id)}
+                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+                  listingMode === mode.id
+                    ? 'bg-slate-900 dark:bg-slate-700 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Right side controls */}
+          <div className="flex items-center gap-3">
+            {/* Sorting Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 hidden sm:inline uppercase tracking-wider">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-4 py-2.5 text-xs font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm cursor-pointer"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+              </select>
+            </div>
+
+            {/* Advanced Filters Toggle Button */}
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
+                showAdvancedFilters
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              Filters
+              {/* Filter count badge */}
+              {(condition !== 'all' || availabilityStatus !== 'all' || minPrice !== '' || maxPrice !== '') && (
+                <span className={`h-2 w-2 rounded-full ${showAdvancedFilters ? 'bg-white' : 'bg-indigo-600'} animate-pulse`}></span>
+              )}
+            </button>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="px-4 py-2.5 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 rounded-xl transition-all cursor-pointer shadow-sm border border-rose-100 dark:border-rose-900/30"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div className="bg-white/80 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl p-6 mb-8 border border-slate-200/60 dark:border-slate-800/60 shadow-md animate-slide-down grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Condition Filter */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Condition</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'all', label: 'Any' },
+                  { id: 'new', label: 'New' },
+                  { id: 'excellent', label: 'Excellent' },
+                  { id: 'good', label: 'Good' },
+                  { id: 'fair', label: 'Fair' }
+                ].map((cond) => (
+                  <button
+                    key={cond.id}
+                    onClick={() => setCondition(cond.id)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      condition === cond.id
+                        ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm'
+                        : 'bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    {cond.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Availability Filter */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Availability</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'all', label: 'Any' },
+                  { id: 'available', label: 'Available' },
+                  { id: 'unavailable', label: 'Unavailable' }
+                ].map((status) => (
+                  <button
+                    key={status.id}
+                    onClick={() => setAvailabilityStatus(status.id)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      availabilityStatus === status.id
+                        ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm'
+                        : 'bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200/50 dark:border-slate-800'
+                    }`}
+                  >
+                    {status.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Price Range Filter */}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Price Range (₹)</label>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Min"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-xs font-bold"
+                  />
+                </div>
+                <span className="text-slate-400 font-bold text-xs">to</span>
+                <div className="relative flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Max"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-xs font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Content States */}
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-4">
@@ -338,7 +629,7 @@ function Home() {
           <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-center font-semibold">
             {error}
           </div>
-        ) : filteredEquipment.length === 0 ? (
+        ) : equipment.length === 0 ? (
           <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/55 dark:border-slate-700/30 shadow-sm">
             <svg className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -349,17 +640,100 @@ function Home() {
             </p>
           </div>
         ) : (
-          /* Equipment Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredEquipment.map((item) => (
-              <EquipmentCard 
-                key={item.id} 
-                item={item} 
-                isOwner={currentUser && item.owner_id === currentUser.id}
-                onRentClick={() => handleRentClick(item)}
-              />
-            ))}
-          </div>
+          <>
+            {/* Equipment Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {equipment.map((item) => (
+                <EquipmentCard 
+                  key={item.id} 
+                  item={item} 
+                  isOwner={currentUser && item.owner_id === currentUser.id}
+                  onRentClick={() => handleRentClick(item)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="mt-12 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-6">
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-slate-500 font-semibold">
+                      Showing <span className="font-extrabold text-slate-900 dark:text-white">{(pagination.page - 1) * pagination.limit + 1}</span> to{' '}
+                      <span className="font-extrabold text-slate-900 dark:text-white">
+                        {Math.min(pagination.page * pagination.limit, pagination.total)}
+                      </span> of{' '}
+                      <span className="font-extrabold text-slate-900 dark:text-white">{pagination.total}</span> listings
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-xl shadow-sm -space-x-px" aria-label="Pagination">
+                      {/* Previous Button */}
+                      <button
+                        onClick={() => setPage(p => Math.max(p - 1, 1))}
+                        disabled={pagination.page === 1}
+                        className={`relative inline-flex items-center px-3.5 py-2.5 rounded-l-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none`}
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Page Numbers */}
+                      {Array.from({ length: pagination.totalPages }, (_, index) => {
+                        const pageNum = index + 1
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setPage(pageNum)}
+                            className={`relative inline-flex items-center px-4 py-2.5 border text-xs font-extrabold cursor-pointer transition-all ${
+                              pagination.page === pageNum
+                                ? 'z-10 bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-750'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                      })}
+
+                      {/* Next Button */}
+                      <button
+                        onClick={() => setPage(p => Math.min(p + 1, pagination.totalPages))}
+                        disabled={pagination.page === pagination.totalPages}
+                        className={`relative inline-flex items-center px-3.5 py-2.5 rounded-r-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none`}
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+
+                {/* Mobile pagination controls */}
+                <div className="flex sm:hidden justify-between w-full">
+                  <button
+                    onClick={() => setPage(p => Math.max(p - 1, 1))}
+                    disabled={pagination.page === 1}
+                    className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 self-center">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage(p => Math.min(p + 1, pagination.totalPages))}
+                    disabled={pagination.page === pagination.totalPages}
+                    className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
 
