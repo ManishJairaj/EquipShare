@@ -24,7 +24,7 @@ def test_database_configuration_has_no_sqlite_fallback():
 def test_alembic_has_one_linear_head():
     config = Config(str(BACKEND_DIR / "alembic.ini"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["d6fa4974832d"]
+    assert script.get_heads() == ["fcfcb90973ac"]
 
 
 def test_migrations_represent_current_foundational_schema():

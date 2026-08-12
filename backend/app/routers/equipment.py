@@ -1,12 +1,15 @@
 from decimal import Decimal
+import os
+import shutil
 from typing import Annotated
+import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status, UploadFile, File
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
-from app.models import Equipment, User
+from app.models import Equipment, User, Review
 from app.schemas import (
     AvailabilityStatus,
     EquipmentCondition,
@@ -17,15 +20,64 @@ from app.schemas import (
     ListingMode,
     PaginatedEquipmentResponse,
 )
+from app.schemas.review import ReviewCreate, ReviewOut
 from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/equipment", tags=["Equipment"])
+
+UPLOAD_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static", "uploads"
+)
+
+
+@router.post("/upload", status_code=status.HTTP_201_CREATED)
+def upload_image(
+    file: UploadFile = File(...),
+    current_user: Annotated[User, Depends(get_current_user)] = None,
+) -> dict[str, str]:
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    
+    # Ensure upload directory exists
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    # Validate file content type
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image",
+        )
+        
+    # Generate unique filename
+    extension = os.path.splitext(file.filename or "")[1] or ".jpg"
+    filename = f"{uuid.uuid4()}{extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    # Save the file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Could not save file: {str(e)}"
+        )
+        
+    # Return the relative URL
+    return {"image_url": f"/static/uploads/{filename}"}
 
 
 def get_equipment_or_404(equipment_id: int, db: Session) -> Equipment:
     equipment = db.scalars(
         select(Equipment)
-        .options(joinedload(Equipment.owner), joinedload(Equipment.rental_requests))
+        .options(
+            joinedload(Equipment.owner),
+            joinedload(Equipment.rental_requests),
+            selectinload(Equipment.reviews).joinedload(Review.reviewer),
+        )
         .where(Equipment.id == equipment_id)
     ).unique().first()
     if equipment is None:
@@ -188,3 +240,44 @@ def delete_equipment(
     db.delete(equipment)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{equipment_id}/reviews", response_model=ReviewOut, status_code=status.HTTP_201_CREATED)
+def create_review(
+    equipment_id: int,
+    review_data: ReviewCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Review:
+    equipment = get_equipment_or_404(equipment_id, db)
+    
+    # Verify reviewer is not the owner
+    if equipment.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot review your own equipment listing",
+        )
+        
+    review = Review(
+        **review_data.model_dump(),
+        equipment_id=equipment_id,
+        reviewer_id=current_user.id,
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+    
+    # Reload review with reviewer details
+    db_review = db.scalars(
+        select(Review)
+        .options(joinedload(Review.reviewer))
+        .where(Review.id == review.id)
+    ).first()
+    
+    if db_review is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to load review with relations",
+        )
+        
+    return db_review

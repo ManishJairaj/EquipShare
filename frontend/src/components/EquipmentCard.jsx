@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -7,6 +8,7 @@ const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
 }).format(Number(value))
 
 function EquipmentCard({ item, onRentClick, isOwner }) {
+  const navigate = useNavigate()
   const [showCalendar, setShowCalendar] = useState(false)
   const isRental = item.listing_mode === 'rent'
   const isAvailable = item.availability_status === 'available'
@@ -65,10 +67,25 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
   // The button should only be disabled if availability_status is manually set to "unavailable" (or it is sold)
   const isButtonDisabled = !isAvailable
 
+  const hasImages = item.image_urls && item.image_urls.length > 0
+
   return (
-    <article className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group">
+    <article 
+      onClick={() => navigate(`/equipment/${item.id}`)}
+      className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer"
+    >
       <div className="h-28 bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-950/40 dark:to-violet-950/40 p-4 flex flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-lg group-hover:scale-125 transition-transform"></div>
+        {hasImages && (
+          <>
+            <img 
+              src={item.image_urls[0].startsWith('http') ? item.image_urls[0] : `http://localhost:8000${item.image_urls[0]}`} 
+              alt={item.name} 
+              className="absolute inset-0 w-full h-full object-cover z-0" 
+            />
+            <div className="absolute inset-0 bg-slate-950/40 dark:bg-slate-950/50 z-0"></div>
+          </>
+        )}
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-lg group-hover:scale-125 transition-transform z-10"></div>
         <div className="flex items-start justify-between gap-2 z-10">
           <span className="text-[10px] uppercase tracking-wider font-extrabold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-md border border-indigo-200/30">
             {item.category}
@@ -85,8 +102,8 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${getBadgeStyles()}`}>
             {getStatusText()}
           </span>
-          <span className="text-slate-400 text-xs capitalize font-bold">
-            <span className="text-slate-700 dark:text-slate-300">{item.condition}</span> condition
+          <span className={`text-xs capitalize font-bold ${hasImages ? 'text-slate-200' : 'text-slate-400'}`}>
+            <span className={hasImages ? 'text-white' : 'text-slate-700 dark:text-slate-300'}>{item.condition}</span> condition
           </span>
         </div>
       </div>
@@ -106,7 +123,10 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
             {/* Availability Calendar Toggle (Only for rentals) */}
             {isRental && (
               <button
-                onClick={() => setShowCalendar(!showCalendar)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowCalendar(!showCalendar)
+                }}
                 className="text-xs text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,7 +139,10 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
 
           {/* Booked Dates dropdown */}
           {isRental && showCalendar && (
-            <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500 animate-slide-down">
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="mt-3 p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-100 dark:border-slate-800 text-xs font-medium text-slate-500 animate-slide-down"
+            >
               <span className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">📅 Reserved Dates:</span>
               {acceptedRentals.length === 0 ? (
                 <span className="text-slate-400 block italic">No active reservations</span>
@@ -154,7 +177,10 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
             </span>
           ) : (
             <button
-              onClick={!isButtonDisabled && onRentClick ? onRentClick : undefined}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (!isButtonDisabled && onRentClick) onRentClick()
+              }}
               disabled={isButtonDisabled}
               className={`px-4 py-2 text-xs font-bold text-white rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10 ${
                 !isButtonDisabled

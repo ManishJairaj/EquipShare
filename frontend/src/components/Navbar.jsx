@@ -6,6 +6,7 @@ function Navbar() {
   const navigate = useNavigate()
   const [user, setUser] = useState(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [activeAlerts, setActiveAlerts] = useState([])
   const token = localStorage.getItem('token')
 
   useEffect(() => {
@@ -15,7 +16,51 @@ function Navbar() {
         headers: { Authorization: `Bearer ${token}` }
       })
       .then(res => {
-        setUser(res.data)
+        const loggedUser = res.data
+        setUser(loggedUser)
+
+        // Check if notifications have been displayed for this session
+        const sessionKey = `notif_shown_${loggedUser.id}`
+        if (!sessionStorage.getItem(sessionKey)) {
+          const collectedAlerts = []
+
+          // Fetch incoming requests for product owners (status: pending)
+          api.get('/rentals/incoming', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          .then(incomingRes => {
+            const pendingCount = incomingRes.data.filter(r => r.status === 'pending').length
+            if (pendingCount > 0) {
+              collectedAlerts.push({
+                id: 'incoming',
+                type: 'incoming',
+                message: `You have ${pendingCount} new pending equipment request${pendingCount > 1 ? 's' : ''} to review in your Dashboard.`
+              })
+              setActiveAlerts(prev => [...prev, ...collectedAlerts])
+            }
+          })
+          .catch(console.error)
+
+          // Fetch outgoing requests for buyers (status: accepted)
+          api.get('/rentals/my-requests', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          .then(outgoingRes => {
+            const acceptedList = outgoingRes.data.filter(r => r.status === 'accepted')
+            if (acceptedList.length > 0) {
+              const items = acceptedList.map(req => ({
+                id: `accepted_${req.id}`,
+                type: 'accepted',
+                message: `Your request to rent/buy "${req.equipment?.name}" has been accepted!`
+              }))
+              setActiveAlerts(prev => [...prev, ...items])
+            }
+          })
+          .catch(console.error)
+
+          // Set session storage flag to prevent popping up on every navigation
+          sessionStorage.setItem(sessionKey, 'true')
+        }
       })
       .catch(() => {
         // Token might be expired
@@ -161,6 +206,62 @@ function Navbar() {
               </Link>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Centered Premium Alert Modal */}
+      {activeAlerts.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800/80 shadow-2xl p-6 sm:p-8 max-w-md w-full animate-zoom-in text-center">
+            {/* Alert Header Icon */}
+            <div className="mx-auto flex items-center justify-center h-14 w-14 rounded-2xl bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 mb-5">
+              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            
+            <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2">
+              Updates for You
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Here are the latest updates regarding your equipment requests:
+            </p>
+
+            {/* List of Alerts */}
+            <div className="space-y-3 max-h-60 overflow-y-auto mb-8 pr-1">
+              {activeAlerts.map((alert) => (
+                <div 
+                  key={alert.id} 
+                  className={`p-4 rounded-2xl border text-left flex items-start gap-3 ${
+                    alert.type === 'incoming' 
+                      ? 'bg-indigo-50/55 dark:bg-indigo-950/15 border-indigo-100 dark:border-indigo-900/30 text-indigo-950 dark:text-indigo-200' 
+                      : 'bg-emerald-50/55 dark:bg-emerald-950/15 border-emerald-100 dark:border-emerald-900/30 text-emerald-950 dark:text-emerald-200'
+                  }`}
+                >
+                  <span className="mt-0.5">
+                    {alert.type === 'incoming' ? (
+                      <span className="flex h-2 w-2 translate-y-1 rounded-full bg-indigo-500"></span>
+                    ) : (
+                      <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <p className="text-xs font-semibold leading-relaxed">
+                    {alert.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={() => setActiveAlerts([])}
+              className="w-full py-3.5 px-6 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-2xl cursor-pointer shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.01] active:scale-[0.99]"
+            >
+              Okay, Got It
+            </button>
+          </div>
         </div>
       )}
     </nav>

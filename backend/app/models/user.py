@@ -9,6 +9,7 @@ from app.database import Base
 if TYPE_CHECKING:
     from app.models.equipment import Equipment
     from app.models.rental_request import RentalRequest
+    from app.models.review import Review
 
 
 class User(Base):
@@ -33,4 +34,7 @@ class User(Base):
     )
     rental_requests: Mapped[list["RentalRequest"]] = relationship(
         back_populates="borrower", cascade="all, delete-orphan"
+    )
+    reviews: Mapped[list["Review"]] = relationship(
+        back_populates="reviewer", cascade="all, delete-orphan"
     )
