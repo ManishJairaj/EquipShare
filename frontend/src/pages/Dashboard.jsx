@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
-import api from '../services/api'
+import api, { API_BASE_URL } from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
@@ -949,7 +949,7 @@ function Dashboard() {
                     {formData.image_urls.map((url, idx) => (
                       <div key={idx} className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 group aspect-video">
                         <img
-                          src={url.startsWith('http') ? url : `http://localhost:8000${url}`}
+                          src={url.startsWith('http') ? url : `${API_BASE_URL}${url}`}
                           alt={`Product preview ${idx + 1}`}
                           className="w-full h-full object-cover"
                         />

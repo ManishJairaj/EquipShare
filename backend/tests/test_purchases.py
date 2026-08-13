@@ -24,6 +24,30 @@ def test_sell_listing_accepts_mode_inferred_purchase_request(
     assert response.json()["equipment"]["listing_mode"] == "sell"
 
 
+def test_purchase_notifies_seller_that_item_was_purchased(
+    client, users, equipment_factory, auth_headers
+):
+    equipment = equipment_factory(
+        owner=users["owner"], name="Campus Projector", listing_mode="sell"
+    )
+    response = client.post(
+        "/rentals",
+        json=purchase_payload(equipment.id),
+        headers=auth_headers(users["borrower"]),
+    )
+    assert response.status_code == 201
+
+    notifications = client.get(
+        "/notifications", headers=auth_headers(users["owner"])
+    )
+    assert notifications.status_code == 200
+    notification = notifications.json()[0]
+    assert notification["type"] == "new_request"
+    assert notification["rental_request_id"] == response.json()["id"]
+    assert notification["is_read"] is False
+    assert "Borrower purchased Campus Projector" in notification["message"]
+
+
 def test_sell_listing_rejects_future_dated_rental_request(
     client, users, equipment_factory, auth_headers, request_payload
 ):

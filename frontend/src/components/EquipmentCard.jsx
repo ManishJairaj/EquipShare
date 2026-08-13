@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { API_BASE_URL } from '../services/api'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -78,7 +79,7 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
         {hasImages && (
           <>
             <img 
-              src={item.image_urls[0].startsWith('http') ? item.image_urls[0] : `http://localhost:8000${item.image_urls[0]}`} 
+              src={item.image_urls[0].startsWith('http') ? item.image_urls[0] : `${API_BASE_URL}${item.image_urls[0]}`} 
               alt={item.name} 
               className="absolute inset-0 w-full h-full object-cover z-0" 
             />

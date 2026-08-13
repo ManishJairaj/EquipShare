@@ -13,6 +13,13 @@ const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
 
 const DEFAULT_CATEGORIES = ['Cameras', 'Electronics', 'Lab', 'Sports', 'Tools', 'Calculators']
 
+const formatLocalDate = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function Home() {
   const navigate = useNavigate()
   const token = localStorage.getItem('token')
@@ -294,8 +301,8 @@ function Home() {
     const dayAfter = new Date()
     dayAfter.setDate(dayAfter.getDate() + 2)
     
-    setStartDate(tomorrow.toISOString().split('T')[0])
-    setEndDate(dayAfter.toISOString().split('T')[0])
+    setStartDate(formatLocalDate(tomorrow))
+    setEndDate(formatLocalDate(dayAfter))
     setBookingError('')
     setBookingSuccess(false)
   }
@@ -345,7 +352,7 @@ function Home() {
       }
     } else {
       // For selling items, use today's date for start & end
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = formatLocalDate(new Date())
       startVal = todayStr
       endVal = todayStr
     }
@@ -767,7 +774,7 @@ function Home() {
                         setStartDate(e.target.value)
                         setBookingError('')
                       }}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={formatLocalDate(new Date())}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                     />
                   </div>
@@ -781,7 +788,7 @@ function Home() {
                         setEndDate(e.target.value)
                         setBookingError('')
                       }}
-                      min={startDate || new Date().toISOString().split('T')[0]}
+                      min={startDate || formatLocalDate(new Date())}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                     />
                   </div>

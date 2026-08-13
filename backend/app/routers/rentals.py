@@ -112,11 +112,19 @@ def create_rental_request(
     )
     db.add(rental_request)
     db.flush()
+    if equipment.listing_mode == ListingMode.SELL:
+        notification_message = (
+            f"New purchase: {current_user.name} purchased {equipment.name}"
+        )
+    else:
+        notification_message = (
+            f"New request: {current_user.name} requested {equipment.name}"
+        )
     db.add(
         Notification(
             user_id=equipment.owner_id,
             type=NotificationType.NEW_REQUEST,
-            message=f"New request: {current_user.name} requested {equipment.name}",
+            message=notification_message,
             rental_request_id=rental_request.id,
         )
     )
