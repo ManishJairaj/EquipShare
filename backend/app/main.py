@@ -3,7 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 
-from app.routers import auth_router, equipment_router, rentals_router
+from app.routers import (
+    auth_router,
+    equipment_router,
+    notifications_router,
+    rentals_router,
+)
 
 app = FastAPI(title="EquipShare API")
 
@@ -18,6 +23,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(equipment_router)
 app.include_router(rentals_router)
+app.include_router(notifications_router)
 
 # Mount static files directory for serving images
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")

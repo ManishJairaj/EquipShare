@@ -16,6 +16,11 @@ from app.schemas.rental_request import (
     RentalRequestDetail,
     RentalRequestOut,
 )
+from app.schemas.notification import (
+    NotificationOut,
+    NotificationsMarkedRead,
+    NotificationUnreadCount,
+)
 from app.schemas.user import Token, TokenData, UserCreate, UserOut
 
 __all__ = [
@@ -26,6 +31,9 @@ __all__ = [
     "EquipmentSort",
     "EquipmentUpdate",
     "ListingMode",
+    "NotificationOut",
+    "NotificationsMarkedRead",
+    "NotificationUnreadCount",
     "OwnerSummary",
     "PaginatedEquipmentResponse",
     "RentalBorrowerSummary",

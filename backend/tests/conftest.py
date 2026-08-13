@@ -2,14 +2,24 @@ from collections.abc import Callable, Generator
 from datetime import date, timedelta
 
 import pytest
+from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from scripts.test_database import get_test_database_url
+from scripts.test_database import BACKEND_DIR, get_test_database_url
 
-REQUIRED_TABLES = {"users", "equipment", "rental_requests", "alembic_version"}
+load_dotenv(BACKEND_DIR / ".env")
+
+REQUIRED_TABLES = {
+    "users",
+    "equipment",
+    "rental_requests",
+    "reviews",
+    "notifications",
+    "alembic_version",
+}
 DEFAULT_PASSWORD = "ValidTestPassword!42"
 
 

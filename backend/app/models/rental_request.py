@@ -1,5 +1,9 @@
 from datetime import date, datetime
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.notification import Notification
 
 class StrEnum(str, Enum):
     def __str__(self) -> str:
@@ -50,3 +54,6 @@ class RentalRequest(Base):
 
     equipment: Mapped["Equipment"] = relationship(back_populates="rental_requests")
     borrower: Mapped["User"] = relationship(back_populates="rental_requests")
+    notifications: Mapped[list["Notification"]] = relationship(
+        back_populates="rental_request", cascade="all, delete-orphan"
+    )

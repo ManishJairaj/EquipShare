@@ -170,3 +170,23 @@ prices. API responses include only the owner's public `id`, `username`, and
 Accepted requests cannot overlap for the same equipment and date range.
 Equipment availability is not changed automatically because requests may be for
 future dates; accepted rental requests are the reservation source of truth.
+
+## Notification API
+
+Authenticated users receive persisted in-app notifications when someone requests
+their equipment and when their own request is accepted or rejected.
+
+- `GET /notifications` returns the current user's recent notifications.
+- `GET /notifications/unread-count` returns the unread total.
+- `PATCH /notifications/{notification_id}/read` marks one owned notification read.
+- `PATCH /notifications/read-all` marks all of the current user's notifications read.
+
+The frontend polls these endpoints every 30 seconds and displays an unread badge,
+notification dropdown, and a prominent latest-unread banner. Apply new migrations
+before starting the updated backend:
+
+```bash
+cd backend
+source .venv/bin/activate
+alembic upgrade head
+```

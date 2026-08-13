@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.equipment import Equipment
     from app.models.rental_request import RentalRequest
     from app.models.review import Review
+    from app.models.notification import Notification
 
 
 class User(Base):
@@ -37,4 +38,7 @@ class User(Base):
     )
     reviews: Mapped[list["Review"]] = relationship(
         back_populates="reviewer", cascade="all, delete-orphan"
+    )
+    notifications: Mapped[list["Notification"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
     )

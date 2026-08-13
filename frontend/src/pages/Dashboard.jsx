@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
@@ -12,6 +12,7 @@ const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
 
 function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const token = localStorage.getItem('token')
   
   const [user, setUser] = useState(null)
@@ -21,7 +22,9 @@ function Dashboard() {
   
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [activeTab, setActiveTab] = useState('listings') // 'listings' or 'rentals'
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get('tab') === 'rentals' ? 'rentals' : 'listings'
+  )
   
   // Form states for adding/editing equipment
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -90,6 +93,12 @@ function Dashboard() {
     }
     fetchData()
   }, [token, navigate, fetchData])
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'rentals') {
+      setActiveTab('rentals')
+    }
+  }, [searchParams])
 
   const handleInputChange = (e) => {
     setFormData({

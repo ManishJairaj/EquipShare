@@ -5,7 +5,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
-from app.models import Equipment, RentalRequest, RentalStatus, User
+from app.models import (
+    Equipment,
+    Notification,
+    NotificationType,
+    RentalRequest,
+    RentalStatus,
+    User,
+)
 from app.schemas import (
     AvailabilityStatus,
     ListingMode,
@@ -103,6 +110,15 @@ def create_rental_request(
         status=RentalStatus.PENDING,
     )
     db.add(rental_request)
+    db.flush()
+    db.add(
+        Notification(
+            user_id=equipment.owner_id,
+            type=NotificationType.NEW_REQUEST,
+            message=f"New request: {current_user.name} requested {equipment.name}",
+            rental_request_id=rental_request.id,
+        )
+    )
     db.commit()
     db.refresh(rental_request)
     return get_rental_or_404(rental_request.id, db)
@@ -187,6 +203,16 @@ def accept_rental_request(
     rental_request.status = RentalStatus.ACCEPTED
     if rental_request.equipment.listing_mode == ListingMode.SELL:
         rental_request.equipment.availability_status = "unavailable"
+    db.add(
+        Notification(
+            user_id=rental_request.borrower_id,
+            type=NotificationType.REQUEST_ACCEPTED,
+            message=(
+                f"Your request for {rental_request.equipment.name} was accepted."
+            ),
+            rental_request_id=rental_request.id,
+        )
+    )
     db.commit()
     db.refresh(rental_request)
     return get_rental_or_404(rental_request.id, db)
@@ -202,6 +228,16 @@ def reject_rental_request(
     require_equipment_owner(rental_request, current_user)
     require_pending(rental_request)
     rental_request.status = RentalStatus.REJECTED
+    db.add(
+        Notification(
+            user_id=rental_request.borrower_id,
+            type=NotificationType.REQUEST_REJECTED,
+            message=(
+                f"Your request for {rental_request.equipment.name} was rejected."
+            ),
+            rental_request_id=rental_request.id,
+        )
+    )
     db.commit()
     db.refresh(rental_request)
     return get_rental_or_404(rental_request.id, db)
