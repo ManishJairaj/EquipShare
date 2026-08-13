@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
+import BookingCalendar from '../components/BookingCalendar.jsx'
 import api from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
 
@@ -551,31 +552,33 @@ function EquipmentDetail() {
               ) : (
                 <form onSubmit={handleBookingSubmit} className="space-y-4">
                   {isRental && (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Start Date</label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => {
-                            setStartDate(e.target.value)
+                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">Select Rental Dates</label>
+                        <BookingCalendar
+                          reservations={reservations}
+                          startDate={startDate}
+                          endDate={endDate}
+                          onSelectRange={(start, end) => {
+                            setStartDate(start)
+                            setEndDate(end)
                             setBookingError('')
                           }}
-                          className="w-full p-3 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">End Date</label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => {
-                            setEndDate(e.target.value)
-                            setBookingError('')
-                          }}
-                          className="w-full p-3 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none"
-                        />
-                      </div>
+                      
+                      {startDate && (
+                        <div className="grid grid-cols-2 gap-3 animate-fade-in">
+                          <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-xl">
+                            <span className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Start Date</span>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{startDate}</span>
+                          </div>
+                          <div className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-xl">
+                            <span className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">End Date</span>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{endDate || 'Select end date'}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

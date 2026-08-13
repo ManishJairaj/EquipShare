@@ -108,6 +108,7 @@ def create_rental_request(
         **request_data.model_dump(),
         borrower_id=current_user.id,
         status=RentalStatus.PENDING,
+        price=equipment.price,
     )
     db.add(rental_request)
     db.flush()
@@ -201,8 +202,50 @@ def accept_rental_request(
         )
 
     rental_request.status = RentalStatus.ACCEPTED
+    
+    # Auto-reject conflicting requests
     if rental_request.equipment.listing_mode == ListingMode.SELL:
         rental_request.equipment.availability_status = "unavailable"
+        # Reject ALL other pending requests
+        other_pending_requests = db.scalars(
+            select(RentalRequest).where(
+                RentalRequest.equipment_id == rental_request.equipment_id,
+                RentalRequest.id != rental_request.id,
+                RentalRequest.status == RentalStatus.PENDING,
+            )
+        ).all()
+        for req in other_pending_requests:
+            req.status = RentalStatus.REJECTED
+            db.add(
+                Notification(
+                    user_id=req.borrower_id,
+                    type=NotificationType.REQUEST_REJECTED,
+                    message=f"Your purchase request for {rental_request.equipment.name} was rejected as the item has been sold.",
+                    rental_request_id=req.id,
+                )
+            )
+    else:
+        # Rental mode: reject overlapping pending requests
+        overlapping_pending_requests = db.scalars(
+            select(RentalRequest).where(
+                RentalRequest.equipment_id == rental_request.equipment_id,
+                RentalRequest.id != rental_request.id,
+                RentalRequest.status == RentalStatus.PENDING,
+                RentalRequest.start_date <= rental_request.end_date,
+                RentalRequest.end_date >= rental_request.start_date,
+            )
+        ).all()
+        for req in overlapping_pending_requests:
+            req.status = RentalStatus.REJECTED
+            db.add(
+                Notification(
+                    user_id=req.borrower_id,
+                    type=NotificationType.REQUEST_REJECTED,
+                    message=f"Your request for {rental_request.equipment.name} was rejected due to an overlapping accepted booking.",
+                    rental_request_id=req.id,
+                )
+            )
+
     db.add(
         Notification(
             user_id=rental_request.borrower_id,
