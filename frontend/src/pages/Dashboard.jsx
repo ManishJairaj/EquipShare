@@ -256,8 +256,29 @@ function Dashboard() {
       const res = await api.patch(`/rentals/${reqId}/accept`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      // Update local state
-      setIncomingRequests(incomingRequests.map(req => req.id === reqId ? res.data : req))
+      const acceptedRequest = res.data
+      const acceptedEquipmentId = acceptedRequest.equipment?.id
+      const isPurchase = acceptedRequest.equipment?.listing_mode === 'sell'
+
+      setIncomingRequests(prev => prev.map(req => {
+        if (req.id === reqId) return acceptedRequest
+        if (
+          isPurchase &&
+          req.status === 'pending' &&
+          req.equipment?.id === acceptedEquipmentId
+        ) {
+          return { ...req, status: 'rejected' }
+        }
+        return req
+      }))
+
+      if (isPurchase && acceptedEquipmentId) {
+        setMyEquipment(prev => prev.map(item =>
+          item.id === acceptedEquipmentId
+            ? { ...item, availability_status: 'unavailable' }
+            : item
+        ))
+      }
     } catch (err) {
       alert(formatApiError(err))
     } finally {

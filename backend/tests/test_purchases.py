@@ -93,6 +93,41 @@ def test_accepted_purchase_marks_item_unavailable_and_blocks_another_buyer(
     assert response.status_code == 409
 
 
+def test_accepted_purchase_rejects_other_pending_purchase_requests_for_seller(
+    client, users, user_factory, equipment_factory, auth_headers
+):
+    equipment = equipment_factory(owner=users["owner"], listing_mode="sell")
+    second_buyer = user_factory(
+        name="Second Buyer",
+        username="second_buyer",
+        email="second-buyer@example.com",
+    )
+    first_purchase = client.post(
+        "/rentals",
+        json=purchase_payload(equipment.id),
+        headers=auth_headers(users["borrower"]),
+    ).json()
+    second_purchase = client.post(
+        "/rentals",
+        json=purchase_payload(equipment.id),
+        headers=auth_headers(second_buyer),
+    ).json()
+
+    accepted = client.patch(
+        f"/rentals/{first_purchase['id']}/accept",
+        headers=auth_headers(users["owner"]),
+    )
+    assert accepted.status_code == 200
+
+    incoming = client.get(
+        "/rentals/incoming", headers=auth_headers(users["owner"])
+    )
+    assert incoming.status_code == 200
+    statuses = {request["id"]: request["status"] for request in incoming.json()}
+    assert statuses[first_purchase["id"]] == "accepted"
+    assert statuses[second_purchase["id"]] == "rejected"
+
+
 def test_sold_item_rejects_rental_shaped_request(
     client, users, equipment_factory, auth_headers, request_payload
 ):
