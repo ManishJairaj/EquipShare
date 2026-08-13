@@ -33,6 +33,7 @@ class RentalRequestOut(BaseModel):
     start_date: date
     end_date: date
     status: RentalStatus
+    price: Decimal
     created_at: datetime
     updated_at: datetime
 

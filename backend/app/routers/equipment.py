@@ -9,7 +9,7 @@ from sqlalchemy import func, or_, select, delete
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
-from app.models import Equipment, User, Review, RentalRequest
+from app.models import Equipment, User, Review, RentalRequest, RentalStatus
 from app.models.notification import Notification
 from app.schemas import (
     AvailabilityStatus,
@@ -272,6 +272,33 @@ def create_review(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot review your own equipment listing",
+        )
+
+    # Check if the user has an accepted or completed request for this equipment
+    has_valid_rental = db.scalar(
+        select(RentalRequest).where(
+            RentalRequest.equipment_id == equipment_id,
+            RentalRequest.borrower_id == current_user.id,
+            RentalRequest.status.in_([RentalStatus.ACCEPTED, RentalStatus.COMPLETED]),
+        )
+    )
+    if not has_valid_rental:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You can only review equipment you have successfully lended or bought",
+        )
+
+    # Check if the user has already reviewed this equipment
+    existing_review = db.scalar(
+        select(Review).where(
+            Review.equipment_id == equipment_id,
+            Review.reviewer_id == current_user.id,
+        )
+    )
+    if existing_review is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already submitted a review for this equipment",
         )
         
     review = Review(

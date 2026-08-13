@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -9,7 +10,7 @@ class StrEnum(str, Enum):
     def __str__(self) -> str:
         return str(self.value)
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, String, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, String, func, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -44,6 +45,9 @@ class RentalRequest(Base):
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default=RentalStatus.PENDING, server_default="pending"
+    )
+    price: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, default=Decimal("0.00"), server_default="0.00"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

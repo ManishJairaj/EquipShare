@@ -17,7 +17,13 @@ if not DATABASE_URL:
         "and add your PostgreSQL connection string."
     )
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=3,
+    max_overflow=0,
+    pool_pre_ping=True,
+    pool_recycle=300,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 

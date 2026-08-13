@@ -659,8 +659,8 @@ function Dashboard() {
                                           </span>
                                           <span className="font-extrabold text-slate-900 dark:text-white">
                                             {item.listing_mode === 'sell'
-                                              ? formatPrice(item.price)
-                                              : calculateTotalCost(b.start_date, b.end_date, item.price || b.price)}
+                                              ? formatPrice(b.price || item.price)
+                                              : calculateTotalCost(b.start_date, b.end_date, b.price || item.price)}
                                           </span>
                                         </div>
                                       </div>
@@ -720,8 +720,8 @@ function Dashboard() {
                                 </td>
                                 <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
                                   {req.equipment?.listing_mode === 'sell'
-                                    ? formatPrice(req.equipment?.price || req.price)
-                                    : calculateTotalCost(req.start_date, req.end_date, req.equipment?.price || req.price)}
+                                    ? formatPrice(req.price || req.equipment?.price)
+                                    : calculateTotalCost(req.start_date, req.end_date, req.price || req.equipment?.price)}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                   {renderStatusBadge(req.status, req.equipment?.listing_mode)}
@@ -802,8 +802,8 @@ function Dashboard() {
                                 </td>
                                 <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
                                   {req.equipment?.listing_mode === 'sell'
-                                    ? formatPrice(req.equipment?.price || req.price)
-                                    : calculateTotalCost(req.start_date, req.end_date, req.equipment?.price || req.price)}
+                                    ? formatPrice(req.price || req.equipment?.price)
+                                    : calculateTotalCost(req.start_date, req.end_date, req.price || req.equipment?.price)}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                   {renderStatusBadge(req.status, req.equipment?.listing_mode)}
