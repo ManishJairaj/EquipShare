@@ -40,7 +40,7 @@ function Home() {
 
   const [listingMode, setListingMode] = useState('all') // 'all', 'rent', 'sell'
   const [condition, setCondition] = useState('all') // 'all', 'new', 'excellent', 'good', 'fair'
-  const [availabilityStatus, setAvailabilityStatus] = useState('all') // 'all', 'available', 'unavailable'
+  const [availabilityStatus, setAvailabilityStatus] = useState('available')
 
   const [minPrice, setMinPrice] = useState('')
   const [debouncedMinPrice, setDebouncedMinPrice] = useState('')
@@ -156,9 +156,7 @@ function Home() {
         if (condition !== 'all') {
           params.condition = condition
         }
-        if (availabilityStatus !== 'all') {
-          params.availability_status = availabilityStatus
-        }
+        params.availability_status = 'available'
         
         const min = parseFloat(debouncedMinPrice)
         if (debouncedMinPrice.trim() && !isNaN(min) && min >= 0) {
@@ -266,7 +264,7 @@ function Home() {
     setSelectedCategory('All')
     setListingMode('all')
     setCondition('all')
-    setAvailabilityStatus('all')
+    setAvailabilityStatus('available')
     setMinPrice('')
     setMaxPrice('')
     setSortBy('newest')
@@ -278,7 +276,7 @@ function Home() {
     selectedCategory !== 'All' ||
     listingMode !== 'all' ||
     condition !== 'all' ||
-    availabilityStatus !== 'all' ||
+    availabilityStatus !== 'available' ||
     minPrice !== '' ||
     maxPrice !== '' ||
     sortBy !== 'newest'
@@ -531,7 +529,7 @@ function Home() {
               </svg>
               Filters
               {/* Filter count badge */}
-              {(condition !== 'all' || availabilityStatus !== 'all' || minPrice !== '' || maxPrice !== '') && (
+              {(condition !== 'all' || minPrice !== '' || maxPrice !== '') && (
                 <span className={`h-2 w-2 rounded-full ${showAdvancedFilters ? 'bg-white' : 'bg-indigo-600'} animate-pulse`}></span>
               )}
             </button>
@@ -577,29 +575,7 @@ function Home() {
               </div>
             </div>
 
-            {/* Availability Filter */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Availability</label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'all', label: 'Any' },
-                  { id: 'available', label: 'Available' },
-                  { id: 'unavailable', label: 'Unavailable' }
-                ].map((status) => (
-                  <button
-                    key={status.id}
-                    onClick={() => setAvailabilityStatus(status.id)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      availabilityStatus === status.id
-                        ? 'bg-slate-900 dark:bg-slate-200 text-white dark:text-slate-900 shadow-sm'
-                        : 'bg-slate-50 dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200/50 dark:border-slate-800'
-                    }`}
-                  >
-                    {status.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             {/* Price Range Filter */}
             <div>
