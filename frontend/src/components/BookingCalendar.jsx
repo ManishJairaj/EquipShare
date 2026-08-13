@@ -18,15 +18,15 @@ export default function BookingCalendar({ reservations, startDate, endDate, onSe
     return date < today
   }
 
-  // Get all dates in a YYYY-MM-DD range (inclusive)
+  // Get all dates in a YYYY-MM-DD range (inclusive) - timezone independent
   const getDatesInRange = (startStr, endStr) => {
     const dates = []
     if (!startStr || !endStr) return dates
-    const current = new Date(startStr + 'T00:00:00')
-    const end = new Date(endStr + 'T00:00:00')
+    const current = new Date(startStr + 'T00:00:00Z')
+    const end = new Date(endStr + 'T00:00:00Z')
     while (current <= end) {
       dates.push(current.toISOString().split('T')[0])
-      current.setDate(current.getDate() + 1)
+      current.setUTCDate(current.getUTCDate() + 1)
     }
     return dates
   }
