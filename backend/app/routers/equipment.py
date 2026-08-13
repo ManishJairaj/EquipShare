@@ -5,11 +5,12 @@ from typing import Annotated
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status, UploadFile, File
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, delete
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.database import get_db
-from app.models import Equipment, User, Review
+from app.models import Equipment, User, Review, RentalRequest
+from app.models.notification import Notification
 from app.schemas import (
     AvailabilityStatus,
     EquipmentCondition,
@@ -236,6 +237,21 @@ def delete_equipment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to delete this equipment",
         )
+
+    # Explicitly cascade delete reviews
+    db.execute(delete(Review).where(Review.equipment_id == equipment_id))
+
+    # Explicitly cascade delete notifications related to requests for this equipment
+    db.execute(
+        delete(Notification).where(
+            Notification.rental_request_id.in_(
+                select(RentalRequest.id).where(RentalRequest.equipment_id == equipment_id)
+            )
+        )
+    )
+
+    # Explicitly cascade delete rental requests
+    db.execute(delete(RentalRequest).where(RentalRequest.equipment_id == equipment_id))
 
     db.delete(equipment)
     db.commit()
