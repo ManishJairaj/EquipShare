@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import BookingCalendar from '../components/BookingCalendar.jsx'
-import api from '../services/api'
+import api, { API_BASE_URL } from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
@@ -10,6 +10,13 @@ const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   currency: 'INR',
   maximumFractionDigits: 2,
 }).format(Number(value))
+
+const formatLocalDate = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function EquipmentDetail() {
   const { id } = useParams()
@@ -52,8 +59,8 @@ function EquipmentDetail() {
         const dayAfter = new Date()
         dayAfter.setDate(dayAfter.getDate() + 2)
         
-        setStartDate(tomorrow.toISOString().split('T')[0])
-        setEndDate(dayAfter.toISOString().split('T')[0])
+        setStartDate(formatLocalDate(tomorrow))
+        setEndDate(formatLocalDate(dayAfter))
       } catch (err) {
         setError(formatApiError(err))
       } finally {
@@ -169,7 +176,7 @@ function EquipmentDetail() {
         return
       }
     } else {
-      const todayStr = new Date().toISOString().split('T')[0]
+      const todayStr = formatLocalDate(new Date())
       startVal = todayStr
       endVal = todayStr
     }
@@ -294,7 +301,7 @@ function EquipmentDetail() {
                   {/* Main Display Image */}
                   <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
                     <img
-                      src={item.image_urls[activeImgIndex].startsWith('http') ? item.image_urls[activeImgIndex] : `http://localhost:8000${item.image_urls[activeImgIndex]}`}
+                      src={item.image_urls[activeImgIndex].startsWith('http') ? item.image_urls[activeImgIndex] : `${API_BASE_URL}${item.image_urls[activeImgIndex]}`}
                       alt={`${item.name} zoom`}
                       className="w-full h-full object-cover"
                     />
@@ -334,7 +341,7 @@ function EquipmentDetail() {
                           }`}
                         >
                           <img
-                            src={url.startsWith('http') ? url : `http://localhost:8000${url}`}
+                            src={url.startsWith('http') ? url : `${API_BASE_URL}${url}`}
                             alt={`Thumb ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
