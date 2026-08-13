@@ -25,6 +25,7 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState(
     searchParams.get('tab') === 'rentals' ? 'rentals' : 'listings'
   )
+  const [listingSubTab, setListingSubTab] = useState('active') // 'active', 'sold'
   
   // Form states for adding/editing equipment
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -348,9 +349,13 @@ function Dashboard() {
   }
 
   // Calculated Stats
-  const activeListings = myEquipment.length
+  const totalListingsCount = myEquipment.length
   const availableCount = myEquipment.filter(item => item.availability_status === 'available').length
   const totalValue = myEquipment.reduce((sum, item) => sum + Number(item.price), 0)
+
+  const activeListingsList = myEquipment.filter(item => item.availability_status === 'available')
+  const soldListingsList = myEquipment.filter(item => item.availability_status !== 'available')
+  const displayedListings = listingSubTab === 'active' ? activeListingsList : soldListingsList
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
@@ -396,7 +401,7 @@ function Dashboard() {
               <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Total Items Listed</span>
-                  <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">{activeListings}</span>
+                  <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">{totalListingsCount}</span>
                 </div>
                 <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -454,105 +459,143 @@ function Dashboard() {
               </button>
             </div>
 
-            {/* TAB CONTENT: Listings */}
             {activeTab === 'listings' && (
               <>
-                {myEquipment.length === 0 ? (
-                  <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/30 shadow-sm">
-                    <svg className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">You haven't listed any equipment yet</h3>
-                    <p className="text-slate-500 mt-1 max-w-sm mx-auto text-sm">
-                      Click the button above to upload cameras, calculators, lab gear, or textbooks for sharing.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden animate-fade-in">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                            <th className="px-6 py-4">Equipment Info</th>
-                            <th className="px-6 py-4">Category</th>
-                            <th className="px-6 py-4">Listing Type</th>
-                            <th className="px-6 py-4">Condition</th>
-                            <th className="px-6 py-4">Availability</th>
-                            <th className="px-6 py-4 text-right">Price</th>
-                            <th className="px-6 py-4 text-center">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
-                          {myEquipment.map((item) => (
-                            <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
-                              <td className="px-6 py-4">
-                                <Link to={`/equipment/${item.id}`} className="font-bold text-slate-900 dark:text-white block text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                  {item.name}
-                                </Link>
-                                <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
-                                  {item.description || 'No description'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-sm font-medium">{item.category}</td>
-                              <td className="px-6 py-4">
-                                <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full ${
-                                  item.listing_mode === 'rent'
-                                    ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
-                                    : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
-                                }`}>
-                                  {item.listing_mode === 'rent' ? 'FOR RENT' : 'FOR SALE'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 capitalize">
-                                  {item.condition}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
-                                  item.availability_status === 'available'
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
-                                    : 'bg-slate-100 dark:bg-slate-900 text-slate-500'
-                                }`}>
-                                  <span className={`h-1.5 w-1.5 rounded-full ${
-                                    item.availability_status === 'available' ? 'bg-emerald-500' : 'bg-slate-400'
-                                  }`}></span>
-                                  {item.availability_status === 'available' ? 'Available' : 'Reserved'}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white text-sm">
-                                {formatPrice(item.price)}
-                                {item.listing_mode === 'rent' && <span className="text-xs text-slate-400 font-normal">/day</span>}
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="inline-flex gap-2">
-                                  <button
-                                    onClick={() => openEditModal(item)}
-                                    className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
-                                  >
-                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(item.id, item.name)}
-                                    className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
-                                  >
-                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  {myEquipment.length === 0 ? (
+                    <div className="py-20 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/30 shadow-sm">
+                      <svg className="h-12 w-12 text-slate-300 dark:text-slate-650 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">You haven't listed any equipment yet</h3>
+                      <p className="text-slate-505 mt-1 max-w-sm mx-auto text-sm">
+                        Click the button above to upload cameras, calculators, lab gear, or textbooks for sharing.
+                      </p>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Sub-Tabs: Active vs Sold Out */}
+                      <div className="flex gap-2 p-1 bg-slate-105 dark:bg-slate-900/60 rounded-2xl max-w-md">
+                        <button
+                          type="button"
+                          onClick={() => setListingSubTab('active')}
+                          className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            listingSubTab === 'active'
+                              ? 'bg-white dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/20'
+                              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                          }`}
+                        >
+                          Active ({activeListingsList.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setListingSubTab('sold')}
+                          className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            listingSubTab === 'sold'
+                              ? 'bg-white dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/20'
+                              : 'text-slate-550 hover:text-slate-700 dark:hover:text-slate-300'
+                          }`}
+                        >
+                          Sold Out / Reserved ({soldListingsList.length})
+                        </button>
+                      </div>
+
+                      {displayedListings.length === 0 ? (
+                        <div className="py-16 text-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/50 dark:border-slate-700/30 shadow-sm">
+                          <svg className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                          </svg>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            No {listingSubTab === 'active' ? 'active' : 'sold out/reserved'} listings found
+                          </h4>
+                        </div>
+                      ) : (
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden animate-fade-in">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  <th className="px-6 py-4">Equipment Info</th>
+                                  <th className="px-6 py-4">Category</th>
+                                  <th className="px-6 py-4">Listing Type</th>
+                                  <th className="px-6 py-4">Condition</th>
+                                  <th className="px-6 py-4">Availability</th>
+                                  <th className="px-6 py-4 text-right">Price</th>
+                                  <th className="px-6 py-4 text-center">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                                {displayedListings.map((item) => (
+                                  <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
+                                    <td className="px-6 py-4">
+                                      <Link to={`/equipment/${item.id}`} className="font-bold text-slate-900 dark:text-white block text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                        {item.name}
+                                      </Link>
+                                      <span className="text-xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
+                                        {item.description || 'No description'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-medium">{item.category}</td>
+                                    <td className="px-6 py-4">
+                                      <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full ${
+                                        item.listing_mode === 'rent'
+                                          ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400'
+                                          : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
+                                      }`}>
+                                        {item.listing_mode === 'rent' ? 'FOR RENT' : 'FOR SALE'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 capitalize">
+                                        {item.condition}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                                        item.availability_status === 'available'
+                                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
+                                          : 'bg-slate-100 dark:bg-slate-900 text-slate-500'
+                                      }`}>
+                                        <span className={`h-1.5 w-1.5 rounded-full ${
+                                          item.availability_status === 'available' ? 'bg-emerald-500' : 'bg-slate-400'
+                                        }`}></span>
+                                        {item.availability_status === 'available' ? 'Available' : 'Reserved'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white text-sm">
+                                      {formatPrice(item.price)}
+                                      {item.listing_mode === 'rent' && <span className="text-xs text-slate-400 font-normal">/day</span>}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                      <div className="inline-flex gap-2">
+                                        <button
+                                          onClick={() => openEditModal(item)}
+                                          className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
+                                        >
+                                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                          </svg>
+                                        </button>
+                                        <button
+                                          onClick={() => handleDelete(item.id, item.name)}
+                                          className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                                        >
+                                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
 
             {/* TAB CONTENT: Rentals */}
             {activeTab === 'rentals' && (
@@ -571,10 +614,10 @@ function Dashboard() {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {myEquipment
-                        .filter(item => incomingRequests.some(r => r.equipment.id === item.id && r.status === 'accepted'))
+                        .filter(item => incomingRequests.some(r => r.equipment?.id === item.id && r.status === 'accepted'))
                         .map(item => {
                           const itemBookings = incomingRequests
-                            .filter(r => r.equipment.id === item.id && r.status === 'accepted')
+                            .filter(r => r.equipment?.id === item.id && r.status === 'accepted')
                             .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
 
                           return (
@@ -661,27 +704,27 @@ function Dashboard() {
                             {incomingRequests.map((req) => (
                               <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
                                 <td className="px-6 py-4">
-                                  <Link to={`/equipment/${req.equipment.id}`} className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                    {req.equipment.name}
+                                  <Link to={`/equipment/${req.equipment?.id}`} className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                    {req.equipment?.name || 'Deleted Equipment'}
                                   </Link>
                                 </td>
                                 <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">
-                                  {req.borrower.name}
+                                  {req.borrower?.name || 'Borrower'}
                                 </td>
                                 <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                                  {req.equipment.listing_mode === 'sell' ? (
+                                  {req.equipment?.listing_mode === 'sell' ? (
                                     <span className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px] bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md border border-amber-200/20">Purchase</span>
                                   ) : (
                                     <span>{req.start_date} to {req.end_date}</span>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
-                                  {req.equipment.listing_mode === 'sell'
-                                    ? formatPrice(req.equipment.price || req.price)
-                                    : calculateTotalCost(req.start_date, req.end_date, req.equipment.price || req.price)}
+                                  {req.equipment?.listing_mode === 'sell'
+                                    ? formatPrice(req.equipment?.price || req.price)
+                                    : calculateTotalCost(req.start_date, req.end_date, req.equipment?.price || req.price)}
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  {renderStatusBadge(req.status, req.equipment.listing_mode)}
+                                  {renderStatusBadge(req.status, req.equipment?.listing_mode)}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                   {req.status === 'pending' ? (
@@ -743,27 +786,27 @@ function Dashboard() {
                             {outgoingRequests.map((req) => (
                               <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/10 transition-colors">
                                 <td className="px-6 py-4">
-                                  <Link to={`/equipment/${req.equipment.id}`} className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                                    {req.equipment.name}
+                                  <Link to={`/equipment/${req.equipment?.id}`} className="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                    {req.equipment?.name || 'Deleted Equipment'}
                                   </Link>
                                 </td>
                                 <td className="px-6 py-4 font-medium text-slate-700 dark:text-slate-300">
-                                  {req.equipment.owner?.name || 'Owner'}
+                                  {req.equipment?.owner?.name || 'Owner'}
                                 </td>
                                 <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                                  {req.equipment.listing_mode === 'sell' ? (
+                                  {req.equipment?.listing_mode === 'sell' ? (
                                     <span className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px] bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md border border-amber-200/20">Purchase</span>
                                   ) : (
                                     <span>{req.start_date} to {req.end_date}</span>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
-                                  {req.equipment.listing_mode === 'sell'
-                                    ? formatPrice(req.equipment.price || req.price)
-                                    : calculateTotalCost(req.start_date, req.end_date, req.equipment.price || req.price)}
+                                  {req.equipment?.listing_mode === 'sell'
+                                    ? formatPrice(req.equipment?.price || req.price)
+                                    : calculateTotalCost(req.start_date, req.end_date, req.equipment?.price || req.price)}
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  {renderStatusBadge(req.status, req.equipment.listing_mode)}
+                                  {renderStatusBadge(req.status, req.equipment?.listing_mode)}
                                 </td>
                                 <td className="px-6 py-4 text-center">
                                   {(req.status === 'pending' || req.status === 'accepted') ? (
