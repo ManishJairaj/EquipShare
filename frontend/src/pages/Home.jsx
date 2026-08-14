@@ -288,23 +288,9 @@ function Home() {
     maxPrice !== '' ||
     sortBy !== 'newest'
 
-  // Handle opening booking modal
+  // Handle navigating to equipment details page to book the item
   const handleRentClick = (item) => {
-    if (!token) {
-      navigate('/login')
-      return
-    }
-    setBookingItem(item)
-    // Set default dates: start tomorrow, end the day after
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const dayAfter = new Date()
-    dayAfter.setDate(dayAfter.getDate() + 2)
-    
-    setStartDate(formatLocalDate(tomorrow))
-    setEndDate(formatLocalDate(dayAfter))
-    setBookingError('')
-    setBookingSuccess(false)
+    navigate(`/equipment/${item.id}`)
   }
 
   // Calculate rental cost
