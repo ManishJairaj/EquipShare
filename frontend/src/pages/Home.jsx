@@ -49,9 +49,6 @@ function Home() {
   const [condition, setCondition] = useState('all') // 'all', 'new', 'excellent', 'good', 'fair'
   const [availabilityStatus, setAvailabilityStatus] = useState('available')
 
-  const [minPrice, setMinPrice] = useState('')
-  const [debouncedMinPrice, setDebouncedMinPrice] = useState('')
-
   const [maxPrice, setMaxPrice] = useState('')
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState('')
 
@@ -102,14 +99,6 @@ function Home() {
     fetchUser()
   }, [token])
 
-  // Debouncing minPrice (300ms)
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedMinPrice(minPrice)
-    }, 300)
-    return () => clearTimeout(handler)
-  }, [minPrice])
-
   // Debouncing maxPrice (300ms)
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -127,7 +116,6 @@ function Home() {
     listingMode,
     condition,
     availabilityStatus,
-    debouncedMinPrice,
     debouncedMaxPrice,
     sortBy,
   ])
@@ -165,11 +153,6 @@ function Home() {
         }
         params.availability_status = 'available'
         
-        const min = parseFloat(debouncedMinPrice)
-        if (debouncedMinPrice.trim() && !isNaN(min) && min >= 0) {
-          params.min_price = min
-        }
-
         const max = parseFloat(debouncedMaxPrice)
         if (debouncedMaxPrice.trim() && !isNaN(max) && max >= 0) {
           params.max_price = max
@@ -204,7 +187,6 @@ function Home() {
     listingMode,
     condition,
     availabilityStatus,
-    debouncedMinPrice,
     debouncedMaxPrice,
     sortBy,
   ])
@@ -272,7 +254,6 @@ function Home() {
     setListingMode('all')
     setCondition('all')
     setAvailabilityStatus('available')
-    setMinPrice('')
     setMaxPrice('')
     setSortBy('newest')
     setPage(1)
@@ -284,7 +265,6 @@ function Home() {
     listingMode !== 'all' ||
     condition !== 'all' ||
     availabilityStatus !== 'available' ||
-    minPrice !== '' ||
     maxPrice !== '' ||
     sortBy !== 'newest'
 
@@ -522,7 +502,7 @@ function Home() {
               </svg>
               Filters
               {/* Filter count badge */}
-              {(condition !== 'all' || minPrice !== '' || maxPrice !== '') && (
+              {(condition !== 'all' || maxPrice !== '') && (
                 <span className={`h-2 w-2 rounded-full ${showAdvancedFilters ? 'bg-white' : 'bg-indigo-600'} animate-pulse`}></span>
               )}
             </button>
@@ -570,33 +550,22 @@ function Home() {
 
 
 
-            {/* Price Range Filter */}
+            {/* Maximum Price Filter */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Price Range (₹)</label>
-              <div className="flex items-center gap-3">
-                <div className="relative flex-1">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Min"
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-xs font-bold"
-                  />
-                </div>
-                <span className="text-slate-400 font-bold text-xs">to</span>
-                <div className="relative flex-1">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Max"
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-xs font-bold"
-                  />
-                </div>
+              <label htmlFor="max-price" className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Price Under (₹)</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
+                <input
+                  id="max-price"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="e.g. 500 or 1000"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-xs font-bold"
+                />
               </div>
             </div>
           </div>
@@ -620,9 +589,9 @@ function Home() {
             <svg className="h-12 w-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Equipment Found</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Products Found</h3>
             <p className="text-slate-500 mt-1 max-w-sm mx-auto text-sm">
-              We couldn't find any matches. Try adjusting your search query or category filters.
+              There are no products matching the current filters. Try increasing the maximum price or clearing a filter.
             </p>
           </div>
         ) : (

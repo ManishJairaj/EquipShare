@@ -63,6 +63,18 @@ def test_equipment_filters(client, discovery_items, params, expected_names):
     assert {item["name"] for item in response.json()["items"]} == expected_names
 
 
+def test_max_price_applies_to_rent_and_sell_listings(client, discovery_items):
+    response = client.get("/equipment", params={"max_price": 1000})
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert {item["name"] for item in items} == {
+        "DSLR Camera",
+        "Scientific Calculator",
+    }
+    assert {item["listing_mode"] for item in items} == {"rent", "sell"}
+    assert all(float(item["price"]) <= 1000 for item in items)
+
+
 @pytest.mark.parametrize("sort", ["price_asc", "price_desc", "newest"])
 def test_equipment_sorting(client, discovery_items, sort):
     items = client.get("/equipment", params={"sort": sort}).json()["items"]
