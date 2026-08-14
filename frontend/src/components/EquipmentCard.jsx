@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../services/api'
+import { formatDate } from '../utils/dateFormatter'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -56,13 +57,9 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
     return isRental ? 'Rent Now' : 'Buy Now'
   }
 
-  // Format date nicely: e.g. "12 Aug"
+  // Format date nicely: e.g. "12/08/2026"
   const formatDateFriendly = (dateStr) => {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short'
-    })
+    return formatDate(dateStr)
   }
 
   // The button should only be disabled if availability_status is manually set to "unavailable" (or it is sold)
@@ -75,7 +72,7 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
       onClick={() => navigate(`/equipment/${item.id}`)}
       className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer"
     >
-      <div className="h-28 bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-950/40 dark:to-violet-950/40 p-4 flex flex-col justify-between relative overflow-hidden">
+      <div className="h-40 bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-950/40 dark:to-violet-950/40 p-4 flex flex-col justify-between relative overflow-hidden">
         {hasImages && (
           <>
             <img 
@@ -87,30 +84,31 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
           </>
         )}
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-lg group-hover:scale-125 transition-transform z-10"></div>
-        <div className="flex items-start justify-between gap-2 z-10">
-          <span className="text-[10px] uppercase tracking-wider font-extrabold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-md border border-indigo-200/30">
-            {item.category}
-          </span>
-          <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-full ${
-            isRental
-              ? 'bg-indigo-600 text-white'
-              : 'bg-amber-500 text-slate-950'
-          }`}>
-            {isRental ? 'FOR RENT' : 'FOR SALE'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between z-10">
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${getBadgeStyles()}`}>
+        <div className="flex items-start justify-between gap-2 z-10 w-full">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider backdrop-blur-sm ${getBadgeStyles()}`}>
             {getStatusText()}
           </span>
-          <span className={`text-xs capitalize font-bold ${hasImages ? 'text-slate-200' : 'text-slate-400'}`}>
-            <span className={hasImages ? 'text-white' : 'text-slate-700 dark:text-slate-300'}>{item.condition}</span> condition
+          <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-md text-white backdrop-blur-sm ${
+            isRental
+              ? 'bg-indigo-600/90'
+              : 'bg-amber-500/90 text-slate-950'
+          }`}>
+            {isRental ? 'RENT' : 'SELL'}
           </span>
         </div>
       </div>
 
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] uppercase tracking-widest font-extrabold text-indigo-600 dark:text-indigo-400">
+              {item.category}
+            </span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-450 font-bold uppercase tracking-wider">
+              {item.condition} Condition
+            </span>
+          </div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {item.name}
           </h3>

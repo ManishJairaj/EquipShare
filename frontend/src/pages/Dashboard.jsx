@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import api, { API_BASE_URL } from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
+import { formatDate } from '../utils/dateFormatter'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -119,7 +120,8 @@ function Dashboard() {
       listing_mode: 'rent',
       price: '',
       availability_status: 'available',
-      image_urls: []
+      image_urls: [],
+      pickup_location: ''
     })
     setFormError('')
     setUploadError('')
@@ -136,7 +138,8 @@ function Dashboard() {
       listing_mode: item.listing_mode,
       price: item.price,
       availability_status: item.availability_status,
-      image_urls: item.image_urls || []
+      image_urls: item.image_urls || [],
+      pickup_location: item.pickup_location || ''
     })
     setFormError('')
     setUploadError('')
@@ -191,8 +194,8 @@ function Dashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.category || !formData.price) {
-      setFormError('Name, Category, and Price are required.')
+    if (!formData.name || !formData.category || !formData.price || !formData.pickup_location) {
+      setFormError('Name, Category, Price, and Pickup Location are required.')
       return
     }
 
@@ -208,7 +211,8 @@ function Dashboard() {
         listing_mode: formData.listing_mode,
         price: parseFloat(formData.price),
         availability_status: formData.availability_status,
-        image_urls: formData.image_urls || []
+        image_urls: formData.image_urls || [],
+        pickup_location: formData.pickup_location
       }
 
       if (editingItem) {
@@ -670,7 +674,7 @@ function Dashboard() {
                                             <span className="text-[10px] text-slate-400">(@{b.borrower.username || 'borrower'})</span>
                                           </div>
                                           <div className="text-slate-500 font-medium pl-4">
-                                            {b.start_date} to {b.end_date}
+                                            {formatDate(b.start_date)} to {formatDate(b.end_date)}
                                           </div>
                                         </div>
 
@@ -736,7 +740,7 @@ function Dashboard() {
                                   {req.equipment?.listing_mode === 'sell' ? (
                                     <span className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px] bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md border border-amber-200/20">Purchase</span>
                                   ) : (
-                                    <span>{req.start_date} to {req.end_date}</span>
+                                    <span>{formatDate(req.start_date)} to {formatDate(req.end_date)}</span>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
@@ -818,7 +822,7 @@ function Dashboard() {
                                   {req.equipment?.listing_mode === 'sell' ? (
                                     <span className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px] bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md border border-amber-200/20">Purchase</span>
                                   ) : (
-                                    <span>{req.start_date} to {req.end_date}</span>
+                                    <span>{formatDate(req.start_date)} to {formatDate(req.end_date)}</span>
                                   )}
                                 </td>
                                 <td className="px-6 py-4 text-right font-extrabold text-slate-900 dark:text-white">
@@ -858,8 +862,8 @@ function Dashboard() {
 
       {/* List / Edit Equipment Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl relative animate-scale-up">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex justify-center p-4">
+          <div className="my-auto bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl relative animate-scale-up">
             <h3 className="text-2xl font-extrabold text-slate-950 dark:text-white mb-6">
               {editingItem ? 'Edit Equipment Listing' : 'List New Equipment'}
             </h3>
@@ -952,6 +956,18 @@ function Dashboard() {
                   value={formData.price}
                   onChange={handleInputChange}
                   placeholder={formData.listing_mode === 'rent' ? 'e.g. 500' : 'e.g. 15000'}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Pickup Location</label>
+                <input
+                  type="text"
+                  name="pickup_location"
+                  value={formData.pickup_location}
+                  onChange={handleInputChange}
+                  placeholder="e.g. Hostel A Room 302, Library Main Gate"
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
                 />
               </div>

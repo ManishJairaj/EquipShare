@@ -34,6 +34,7 @@ class Equipment(Base):
         String(50), nullable=False, default="available", server_default="available"
     )
     image_urls: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list, server_default="[]")
+    pickup_location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )

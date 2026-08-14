@@ -57,6 +57,19 @@ function Register() {
         email: formData.email,
         password: formData.password
       })
+      
+      // Auto login: FastAPI OAuth2PasswordRequestForm expects application/x-www-form-urlencoded
+      const loginParams = new URLSearchParams()
+      loginParams.append('username', formData.email)
+      loginParams.append('password', formData.password)
+      
+      const loginResponse = await api.post('/auth/login', loginParams, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      })
+      
+      localStorage.setItem('token', loginResponse.data.access_token)
       setSuccess(true)
       setTimeout(() => {
         navigate('/')
