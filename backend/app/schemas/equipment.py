@@ -54,10 +54,11 @@ class EquipmentBase(BaseModel):
     price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     availability_status: AvailabilityStatus = AvailabilityStatus.AVAILABLE
     image_urls: list[str] = Field(default_factory=list)
+    pickup_location: str | None = Field(default=None, max_length=255)
 
 
 class EquipmentCreate(EquipmentBase):
-    pass
+    pickup_location: str = Field(min_length=1, max_length=255)
 
 
 class EquipmentUpdate(BaseModel):
@@ -71,6 +72,7 @@ class EquipmentUpdate(BaseModel):
     price: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2)
     availability_status: AvailabilityStatus | None = None
     image_urls: list[str] | None = None
+    pickup_location: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 class RentalRangeOut(BaseModel):

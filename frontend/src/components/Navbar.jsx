@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import api from '../services/api'
+import { formatDateTime } from '../utils/dateFormatter'
 
 function Navbar() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
+  const location = useLocation()
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem('user')
+      return cached ? JSON.parse(cached) : null
+    } catch {
+      return null
+    }
+  })
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -15,6 +24,7 @@ function Navbar() {
   useEffect(() => {
     if (!token) {
       setUser(null)
+      localStorage.removeItem('user')
       setNotifications([])
       setUnreadCount(0)
       return
@@ -46,11 +56,15 @@ function Navbar() {
 
     api.get('/auth/me', { headers })
       .then(res => {
-        if (!cancelled) setUser(res.data)
+        if (!cancelled) {
+          setUser(res.data)
+          localStorage.setItem('user', JSON.stringify(res.data))
+        }
       })
       .catch(() => {
         if (!cancelled) {
           localStorage.removeItem('token')
+          localStorage.removeItem('user')
           setUser(null)
         }
       })
@@ -98,6 +112,7 @@ function Navbar() {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
     setUser(null)
     setNotifications([])
     setUnreadCount(0)
@@ -123,13 +138,23 @@ function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium transition-colors">
+            <Link
+              to="/"
+              className={location.pathname === '/'
+                ? "text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/80 dark:bg-indigo-950/30 px-3 py-1.5 rounded-xl transition-all"
+                : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
+            >
               Explore
             </Link>
             
             {user ? (
               <>
-                <Link to="/dashboard" className="text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium transition-colors">
+                <Link
+                  to="/dashboard"
+                  className={location.pathname === '/dashboard'
+                    ? "text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/80 dark:bg-indigo-950/30 px-3 py-1.5 rounded-xl transition-all"
+                    : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
+                >
                   Dashboard
                 </Link>
                 <button
@@ -220,7 +245,9 @@ function Navbar() {
           <Link
             to="/"
             onClick={() => setIsOpen(false)}
-            className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+            className={location.pathname === '/'
+              ? "block px-3 py-2 rounded-xl text-base font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/30"
+              : "block px-3 py-2 rounded-xl text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"}
           >
             Explore
           </Link>
@@ -229,7 +256,9 @@ function Navbar() {
               <Link
                 to="/dashboard"
                 onClick={() => setIsOpen(false)}
-                className="block px-3 py-2 rounded-lg text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                className={location.pathname === '/dashboard'
+                  ? "block px-3 py-2 rounded-xl text-base font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/30"
+                  : "block px-3 py-2 rounded-xl text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-850"}
               >
                 Dashboard
               </Link>
@@ -306,7 +335,7 @@ function Navbar() {
                   <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${notification.is_read ? 'bg-slate-300 dark:bg-slate-600' : 'bg-indigo-500'}`} />
                   <div>
                     <p className="text-sm font-semibold leading-relaxed text-slate-800 dark:text-slate-200">{notification.message}</p>
-                    <p className="mt-1 text-xs text-slate-400">{new Date(notification.created_at).toLocaleString()}</p>
+                    <p className="mt-1 text-xs text-slate-400">{formatDateTime(notification.created_at)}</p>
                   </div>
                 </div>
               </button>

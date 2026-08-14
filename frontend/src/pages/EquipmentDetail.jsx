@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar.jsx'
 import BookingCalendar from '../components/BookingCalendar.jsx'
 import api, { API_BASE_URL } from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
+import { formatDate } from '../utils/dateFormatter'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -402,6 +403,15 @@ function EquipmentDetail() {
                 <p className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-relaxed whitespace-pre-line">
                   {item.description || 'No description was provided by the owner.'}
                 </p>
+                {item.pickup_location && (
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center gap-2 text-sm font-semibold text-slate-850 dark:text-slate-200">
+                    <svg className="h-5 w-5 text-indigo-600 dark:text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>Pickup Location: <span className="font-bold text-indigo-600 dark:text-indigo-400">{item.pickup_location}</span></span>
+                  </div>
+                )}
               </div>
 
               {/* Owner Details Card */}
@@ -494,11 +504,7 @@ function EquipmentDetail() {
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-400 font-medium">
-                          {new Date(rev.created_at).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
+                          {formatDate(rev.created_at)}
                         </span>
                       </div>
 
@@ -641,7 +647,7 @@ function EquipmentDetail() {
                     <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                       {reservations.map((r, idx) => (
                         <div key={idx} className="flex justify-between items-center text-slate-500 dark:text-slate-400 font-semibold p-2 bg-slate-50 dark:bg-slate-900/40 rounded-lg border border-slate-150 dark:border-slate-850">
-                          <span>📅 {new Date(r.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - {new Date(r.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                          <span>📅 {formatDate(r.start_date)} - {formatDate(r.end_date)}</span>
                           <span className="text-[9px] uppercase px-1.5 py-0.5 font-extrabold bg-rose-50 dark:bg-rose-950/40 text-rose-600 rounded">Reserved</span>
                         </div>
                       ))}
