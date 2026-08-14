@@ -67,12 +67,21 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
 
   const hasImages = item.image_urls && item.image_urls.length > 0
 
+  const getCategoryBadgeClass = () => {
+    const category = item.category?.toLowerCase() || ''
+    if (category.includes('camera') || category.includes('photo')) return 'theme-badge-lavender'
+    if (category.includes('electronic') || category.includes('calculator')) return 'theme-badge-blue'
+    if (category.includes('book')) return 'theme-badge-yellow'
+    if (category.includes('sport')) return 'theme-badge-mint'
+    return 'theme-badge-peach'
+  }
+
   return (
     <article 
       onClick={() => navigate(`/equipment/${item.id}`)}
-      className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer"
+      className="theme-card bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer"
     >
-      <div className="h-40 bg-gradient-to-br from-indigo-500/20 to-violet-500/20 dark:from-indigo-950/40 dark:to-violet-950/40 p-4 flex flex-col justify-between relative overflow-hidden">
+      <div className="h-40 bg-[var(--accent-blue)] p-4 flex flex-col justify-between relative overflow-hidden">
         {hasImages && (
           <>
             <img 
@@ -85,13 +94,13 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
         )}
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-lg group-hover:scale-125 transition-transform z-10"></div>
         <div className="flex items-start justify-between gap-2 z-10 w-full">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider backdrop-blur-sm ${getBadgeStyles()}`}>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${getBadgeStyles()}`}>
             {getStatusText()}
           </span>
-          <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-md text-white backdrop-blur-sm ${
+          <span className={`text-[10px] font-extrabold tracking-wider px-2.5 py-1 rounded-md ${
             isRental
-              ? 'bg-indigo-600/90'
-              : 'bg-amber-500/90 text-slate-950'
+              ? 'theme-badge-lavender'
+              : 'theme-badge-peach'
           }`}>
             {isRental ? 'RENT' : 'SELL'}
           </span>
@@ -101,7 +110,7 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] uppercase tracking-widest font-extrabold text-indigo-600 dark:text-indigo-400">
+            <span className={`text-[10px] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-md ${getCategoryBadgeClass()}`}>
               {item.category}
             </span>
             <span className="text-slate-300 dark:text-slate-600">•</span>
@@ -181,9 +190,9 @@ function EquipmentCard({ item, onRentClick, isOwner }) {
                 if (!isButtonDisabled && onRentClick) onRentClick()
               }}
               disabled={isButtonDisabled}
-              className={`px-4 py-2 text-xs font-bold text-white rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10 ${
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                 !isButtonDisabled
-                  ? 'bg-slate-950 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-500'
+                  ? 'theme-secondary-button'
                   : 'bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 shadow-none pointer-events-none'
               }`}
             >

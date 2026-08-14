@@ -4,14 +4,17 @@ import Navbar from '../components/Navbar.jsx'
 import EquipmentCard from '../components/EquipmentCard.jsx'
 import api from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
+import {
+  FIXED_CATEGORY_VALUES,
+  getCategoryLabel,
+  mergeEquipmentCategories,
+} from '../constants/categories'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
   currency: 'INR',
   maximumFractionDigits: 2,
 }).format(Number(value))
-
-const DEFAULT_CATEGORIES = ['Cameras', 'Electronics', 'Lab', 'Sports', 'Tools', 'Calculators']
 
 const formatLocalDate = (date) => {
   const year = date.getFullYear()
@@ -72,12 +75,11 @@ function Home() {
         const res = await api.get('/equipment', { params: { limit: 100 } })
         const responseData = res.data
         const items = responseData.items || []
-        const dbCategories = [...new Set(items.map(item => item.category).filter(Boolean))]
-        const combined = Array.from(new Set([...DEFAULT_CATEGORIES, ...dbCategories])).sort()
-        setCategories(['All', ...combined])
+        const dbCategories = items.map(item => item.category).filter(Boolean)
+        setCategories(['All', ...mergeEquipmentCategories(dbCategories)])
       } catch (err) {
         console.error('Failed to discover categories:', err)
-        setCategories(['All', ...DEFAULT_CATEGORIES])
+        setCategories(['All', ...FIXED_CATEGORY_VALUES])
       }
     }
     fetchAllCategories()
@@ -350,26 +352,26 @@ function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
+    <div className="theme-page min-h-screen flex flex-col">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 py-20 px-4 text-center text-white">
+      <section className="theme-hero relative overflow-hidden py-20 px-4 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(99,102,241,0.1),transparent)] pointer-events-none"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(168,85,247,0.08),transparent)] pointer-events-none"></div>
         
         <div className="max-w-4xl mx-auto relative z-10">
-          <span className="inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 mb-6">
+          <span className="theme-badge-yellow inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-bold mb-6">
             <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
             Campus Sharing Platform
           </span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight">
             Borrow what you need, <br className="hidden sm:inline" />
-            <span className="bg-gradient-to-r from-indigo-400 via-violet-300 to-indigo-400 bg-clip-text text-transparent">
+            <span className="text-[var(--foreground)] underline decoration-[var(--accent-peach)] decoration-8 underline-offset-4">
               lend what you don't.
             </span>
           </h1>
-          <p className="mt-6 text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto font-normal leading-relaxed">
+          <p className="mt-6 text-lg sm:text-xl text-[var(--foreground)]/75 max-w-2xl mx-auto font-normal leading-relaxed">
             Access sports gear, lab tools, DSLR cameras, electronics, and calculators listed by your fellow college students.
           </p>
 
@@ -380,7 +382,7 @@ function Home() {
                 e.preventDefault()
                 setSearchParam(searchQuery)
               }}
-              className="relative flex items-center bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-200/55 dark:border-slate-700/50"
+              className="theme-card relative flex items-center bg-white p-2 rounded-2xl border"
             >
               <div className="pl-3 pr-2 text-slate-400">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -410,7 +412,7 @@ function Home() {
               )}
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all cursor-pointer shadow-md shadow-indigo-500/10"
+                className="theme-primary-button px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer"
               >
                 Search
               </button>
@@ -438,11 +440,11 @@ function Home() {
                 onClick={() => setSelectedCategory(category)}
                 className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                   selectedCategory === category
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                    ? 'theme-filter-selected border'
                     : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 border border-slate-200 dark:border-slate-800'
                 }`}
               >
-                {category}
+                {category === 'All' ? category : getCategoryLabel(category)}
               </button>
             ))}
           </div>
@@ -462,7 +464,7 @@ function Home() {
                 onClick={() => setListingMode(mode.id)}
                 className={`px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                   listingMode === mode.id
-                    ? 'bg-slate-900 dark:bg-slate-700 text-white shadow-sm'
+                    ? 'theme-filter-selected border'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
@@ -493,7 +495,7 @@ function Home() {
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-2 cursor-pointer shadow-sm ${
                 showAdvancedFilters
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/20'
+                  ? 'theme-filter-selected'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
@@ -521,7 +523,7 @@ function Home() {
 
         {/* Advanced Filters Panel */}
         {showAdvancedFilters && (
-          <div className="bg-white/80 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl p-6 mb-8 border border-slate-200/60 dark:border-slate-800/60 shadow-md animate-slide-down grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="theme-card bg-white/80 rounded-2xl p-6 mb-8 border animate-slide-down grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Condition Filter */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Condition</label>

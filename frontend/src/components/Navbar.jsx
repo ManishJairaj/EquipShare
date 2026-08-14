@@ -121,17 +121,23 @@ function Navbar() {
 
   const latestUnread = notifications.find(notification => !notification.is_read)
 
+  const notificationTone = (notification) => {
+    if (notification.type === 'request_accepted') return 'theme-alert-success'
+    if (notification.type === 'request_rejected') return 'theme-alert-error'
+    return 'theme-alert-pending'
+  }
+
   return (
-    <nav className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800 transition-all duration-300">
+    <nav className="theme-navbar relative bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2 group">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-all duration-200">
+              <div className="theme-logo-mark h-9 w-9 rounded-lg flex items-center justify-center group-hover:scale-105 transition-all duration-200">
                 <span className="text-white font-bold text-lg">E</span>
               </div>
-              <span className="font-extrabold text-xl bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-                Equip<span className="text-indigo-600 dark:text-indigo-400">Share</span>
+              <span className="font-extrabold text-xl text-[var(--foreground)]">
+                Equip<span className="text-[var(--foreground)]">Share</span>
               </span>
             </Link>
           </div>
@@ -141,7 +147,7 @@ function Navbar() {
             <Link
               to="/"
               className={location.pathname === '/'
-                ? "text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/80 dark:bg-indigo-950/30 px-3 py-1.5 rounded-xl transition-all"
+                ? "theme-nav-active font-bold px-3 py-1.5 rounded-lg transition-all"
                 : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
             >
               Explore
@@ -152,7 +158,7 @@ function Navbar() {
                 <Link
                   to="/dashboard"
                   className={location.pathname === '/dashboard'
-                    ? "text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50/80 dark:bg-indigo-950/30 px-3 py-1.5 rounded-xl transition-all"
+                    ? "theme-nav-active font-bold px-3 py-1.5 rounded-lg transition-all"
                     : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
                 >
                   Dashboard
@@ -180,7 +186,7 @@ function Navbar() {
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-xl transition-all shadow-md shadow-indigo-500/10 cursor-pointer"
+                    className="theme-primary-button inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer"
                   >
                     Log Out
                   </button>
@@ -193,7 +199,7 @@ function Navbar() {
                 </Link>
                 <Link
                   to="/register"
-                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-md shadow-indigo-500/20"
+                  className="theme-primary-button inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-lg transition-all"
                 >
                   Get Started
                 </Link>
@@ -290,7 +296,7 @@ function Navbar() {
               <Link
                 to="/register"
                 onClick={() => setIsOpen(false)}
-                className="block text-center px-4 py-2 text-base font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl"
+                className="theme-primary-button block text-center px-4 py-2 text-base font-medium rounded-lg"
               >
                 Get Started
               </Link>
@@ -300,7 +306,7 @@ function Navbar() {
       )}
 
       {user && notificationsOpen && (
-        <div className="absolute right-4 top-16 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+        <div className="theme-card absolute right-4 top-16 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border bg-white">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
             <div>
               <h3 className="font-extrabold text-slate-900 dark:text-white">Notifications</h3>
@@ -325,10 +331,10 @@ function Navbar() {
                 type="button"
                 key={notification.id}
                 onClick={() => markNotificationRead(notification)}
-                className={`w-full border-b border-slate-100 px-4 py-4 text-left transition-colors last:border-0 dark:border-slate-800 cursor-pointer ${
+                className={`w-full border-b px-4 py-4 text-left transition-colors last:border-0 cursor-pointer ${notificationTone(notification)} ${
                   notification.is_read
-                    ? 'bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/70'
-                    : 'bg-indigo-50 hover:bg-indigo-100/70 dark:bg-indigo-950/30 dark:hover:bg-indigo-950/50'
+                    ? 'opacity-65 hover:opacity-85'
+                    : 'hover:brightness-95'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -348,7 +354,7 @@ function Navbar() {
         <button
           type="button"
           onClick={() => markNotificationRead(latestUnread)}
-          className="w-full border-t border-indigo-200/60 bg-indigo-50 px-4 py-2.5 text-left text-sm font-semibold text-indigo-900 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/35 dark:text-indigo-200 dark:hover:bg-indigo-950/55 cursor-pointer"
+          className={`w-full border-t border-[var(--border)] px-4 py-2.5 text-left text-sm font-semibold hover:brightness-95 cursor-pointer ${notificationTone(latestUnread)}`}
         >
           <span className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <span className="truncate">{latestUnread.message}</span>

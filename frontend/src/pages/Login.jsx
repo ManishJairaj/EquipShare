@@ -56,11 +56,11 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
+    <div className="theme-page min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
       <Navbar />
 
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700/50 p-8 relative overflow-hidden transition-all duration-300">
+        <div className="theme-card w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/50 p-8 relative overflow-hidden transition-all duration-300">
           {/* Decorative background shapes */}
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-24 h-24 bg-violet-500/10 rounded-full blur-xl pointer-events-none"></div>
@@ -75,7 +75,7 @@ function Login() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-sm font-semibold animate-shake">
+            <div className="theme-alert-error mb-6 p-4 rounded-xl border text-sm font-semibold animate-shake">
               {error}
             </div>
           )}
@@ -93,7 +93,7 @@ function Login() {
                 onChange={handleChange}
                 disabled={loading}
                 placeholder="your.email@college.edu or username"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                className="theme-input w-full px-4 py-3 rounded-xl border transition-all text-sm font-medium"
               />
             </div>
 
@@ -111,14 +111,14 @@ function Login() {
                 onChange={handleChange}
                 disabled={loading}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                className="theme-input w-full px-4 py-3 rounded-xl border transition-all text-sm font-medium"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/25 dark:shadow-none hover:shadow-indigo-500/35 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:pointer-events-none"
+              className="theme-primary-button w-full py-3.5 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:pointer-events-none"
             >
               {loading ? (
                 <>

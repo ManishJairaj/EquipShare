@@ -105,7 +105,7 @@ export default function BookingCalendar({ reservations, startDate, endDate, onSe
     } else if (isBooked) {
       btnClass = 'bg-rose-50 dark:bg-rose-955/20 text-rose-500 cursor-not-allowed border border-rose-200/20 relative'
     } else if (isStart || isEnd) {
-      btnClass = 'bg-indigo-600 text-white shadow-md'
+      btnClass = 'theme-filter-selected'
     } else if (isInRange) {
       btnClass = 'bg-indigo-500/15 dark:bg-indigo-900/30 text-indigo-650 dark:text-indigo-400 font-extrabold'
     }
@@ -127,7 +127,7 @@ export default function BookingCalendar({ reservations, startDate, endDate, onSe
   }
 
   return (
-    <div className="border border-slate-200/60 dark:border-slate-800 rounded-2xl p-4 bg-slate-50 dark:bg-slate-900/30">
+    <div className="theme-card-muted rounded-2xl p-4">
       <div className="flex justify-between items-center mb-3">
         <span className="text-xs font-extrabold uppercase text-slate-500 dark:text-slate-400">
           {monthNames[month]} {year}

@@ -4,6 +4,11 @@ import Navbar from '../components/Navbar.jsx'
 import api, { API_BASE_URL } from '../services/api'
 import { formatApiError } from '../utils/errorFormatter'
 import { formatDate } from '../utils/dateFormatter'
+import {
+  EQUIPMENT_CATEGORIES,
+  OTHER_CATEGORY_VALUE,
+  getFixedCategory,
+} from '../constants/categories'
 
 const formatPrice = (value) => new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -43,6 +48,8 @@ function Dashboard() {
   })
   const [formError, setFormError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [isCustomCategory, setIsCustomCategory] = useState(false)
+  const [customCategory, setCustomCategory] = useState('')
 
   const [uploadingImage, setUploadingImage] = useState(false)
   const [uploadError, setUploadError] = useState('')
@@ -110,6 +117,28 @@ function Dashboard() {
     setFormError('')
   }
 
+  const handleCategorySelection = (e) => {
+    const selectedCategory = e.target.value
+
+    if (selectedCategory === OTHER_CATEGORY_VALUE) {
+      setIsCustomCategory(true)
+      setCustomCategory('')
+      setFormData((current) => ({ ...current, category: '' }))
+    } else {
+      setIsCustomCategory(false)
+      setCustomCategory('')
+      setFormData((current) => ({ ...current, category: selectedCategory }))
+    }
+    setFormError('')
+  }
+
+  const handleCustomCategoryChange = (e) => {
+    const category = e.target.value
+    setCustomCategory(category)
+    setFormData((current) => ({ ...current, category }))
+    setFormError('')
+  }
+
   const openAddModal = () => {
     setEditingItem(null)
     setFormData({
@@ -120,27 +149,30 @@ function Dashboard() {
       listing_mode: 'rent',
       price: '',
       availability_status: 'available',
-      image_urls: [],
-      pickup_location: ''
+      image_urls: []
     })
+    setIsCustomCategory(false)
+    setCustomCategory('')
     setFormError('')
     setUploadError('')
     setIsModalOpen(true)
   }
 
   const openEditModal = (item) => {
+    const fixedCategory = getFixedCategory(item.category)
     setEditingItem(item)
     setFormData({
       name: item.name,
       description: item.description || '',
-      category: item.category,
+      category: fixedCategory?.value || item.category || '',
       condition: item.condition,
       listing_mode: item.listing_mode,
       price: item.price,
       availability_status: item.availability_status,
-      image_urls: item.image_urls || [],
-      pickup_location: item.pickup_location || ''
+      image_urls: item.image_urls || []
     })
+    setIsCustomCategory(!fixedCategory)
+    setCustomCategory(fixedCategory ? '' : item.category || '')
     setFormError('')
     setUploadError('')
     setIsModalOpen(true)
@@ -194,8 +226,15 @@ function Dashboard() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.category || !formData.price || !formData.pickup_location) {
-      setFormError('Name, Category, Price, and Pickup Location are required.')
+    const normalizedCategory = formData.category.trim()
+
+    if (!formData.name || !normalizedCategory || !formData.price) {
+      setFormError('Name, Category, and Price are required.')
+      return
+    }
+
+    if (isCustomCategory && normalizedCategory.toLocaleLowerCase() === 'other') {
+      setFormError('Please enter a specific category instead of "Other".')
       return
     }
 
@@ -206,13 +245,12 @@ function Dashboard() {
       const payload = {
         name: formData.name,
         description: formData.description || null,
-        category: formData.category,
+        category: normalizedCategory,
         condition: formData.condition,
         listing_mode: formData.listing_mode,
         price: parseFloat(formData.price),
         availability_status: formData.availability_status,
-        image_urls: formData.image_urls || [],
-        pickup_location: formData.pickup_location
+        image_urls: formData.image_urls || []
       }
 
       if (editingItem) {
@@ -383,7 +421,7 @@ function Dashboard() {
   const displayedListings = listingSubTab === 'active' ? activeListingsList : soldListingsList
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
+    <div className="theme-page min-h-screen flex flex-col">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -412,7 +450,7 @@ function Dashboard() {
 
               <button
                 onClick={openAddModal}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-all shadow-lg shadow-indigo-500/20 self-start cursor-pointer"
+                className="theme-primary-button inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold rounded-xl transition-all self-start cursor-pointer"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -423,7 +461,7 @@ function Dashboard() {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
+              <div className="theme-card bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Total Items Listed</span>
                   <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">{totalListingsCount}</span>
@@ -435,7 +473,7 @@ function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
+              <div className="theme-card bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Available Status</span>
                   <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">{availableCount}</span>
@@ -447,7 +485,7 @@ function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
+              <div className="theme-card bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm flex items-center justify-between">
                 <div>
                   <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Total Listed Value</span>
                   <span className="text-3xl font-extrabold text-slate-950 dark:text-white mt-1 block">{formatPrice(totalValue)}</span>
@@ -534,7 +572,7 @@ function Dashboard() {
                           </h4>
                         </div>
                       ) : (
-                        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden animate-fade-in">
+                        <div className="theme-card bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden animate-fade-in">
                           <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                               <thead>
@@ -646,7 +684,7 @@ function Dashboard() {
                             .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
 
                           return (
-                            <div key={item.id} className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm p-6 space-y-4 flex flex-col justify-between">
+                            <div key={item.id} className="theme-card bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm p-6 space-y-4 flex flex-col justify-between">
                               <div>
                                 <div className="flex justify-between items-start">
                                   <div>
@@ -712,7 +750,7 @@ function Dashboard() {
                       No incoming rental requests.
                     </div>
                   ) : (
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                    <div className="theme-card bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -757,14 +795,14 @@ function Dashboard() {
                                       <button
                                         onClick={() => handleAcceptRental(req.id)}
                                         disabled={actionLoadingId === req.id}
-                                        className="px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                        className="theme-positive-button px-3 py-1.5 text-xs font-bold rounded-lg transition-all disabled:opacity-50 cursor-pointer"
                                       >
                                         Accept
                                       </button>
                                       <button
                                         onClick={() => handleRejectRental(req.id)}
                                         disabled={actionLoadingId === req.id}
-                                        className="px-3 py-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-lg shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                        className="theme-danger-button px-3 py-1.5 text-xs font-bold rounded-lg transition-all disabled:opacity-50 cursor-pointer"
                                       >
                                         Reject
                                       </button>
@@ -794,7 +832,7 @@ function Dashboard() {
                       No outgoing rental requests.
                     </div>
                   ) : (
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
+                    <div className="theme-card bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700/50 shadow-sm overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                           <thead>
@@ -838,7 +876,7 @@ function Dashboard() {
                                     <button
                                       onClick={() => handleCancelRental(req.id)}
                                       disabled={actionLoadingId === req.id}
-                                      className="px-3 py-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-900 dark:hover:bg-slate-950 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 transition-all disabled:opacity-50 cursor-pointer"
+                                      className="theme-danger-button px-3 py-1.5 text-xs font-bold rounded-lg transition-all disabled:opacity-50 cursor-pointer"
                                     >
                                       Cancel Request
                                     </button>
@@ -863,13 +901,13 @@ function Dashboard() {
       {/* List / Edit Equipment Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex justify-center p-4">
-          <div className="my-auto bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-8 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl relative animate-scale-up">
+          <div className="theme-card my-auto bg-white dark:bg-slate-800 rounded-2xl max-w-lg w-full p-8 border relative animate-scale-up">
             <h3 className="text-2xl font-extrabold text-slate-950 dark:text-white mb-6">
               {editingItem ? 'Edit Equipment Listing' : 'List New Equipment'}
             </h3>
 
             {formError && (
-              <div className="mb-5 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-sm font-semibold">
+              <div className="theme-alert-error mb-5 p-4 rounded-xl border text-sm font-semibold">
                 {formError}
               </div>
             )}
@@ -890,14 +928,17 @@ function Dashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Category</label>
-                  <input
-                    type="text"
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    placeholder="e.g. Cameras, Calculators"
+                  <select
+                    value={isCustomCategory ? OTHER_CATEGORY_VALUE : formData.category}
+                    onChange={handleCategorySelection}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
-                  />
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {EQUIPMENT_CATEGORIES.map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                    <option value={OTHER_CATEGORY_VALUE}>Other</option>
+                  </select>
                 </div>
 
                 <div>
@@ -913,6 +954,26 @@ function Dashboard() {
                   </select>
                 </div>
               </div>
+
+              {isCustomCategory && (
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Specify Category
+                  </label>
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={handleCustomCategoryChange}
+                    maxLength={100}
+                    autoFocus
+                    placeholder="e.g. Architecture Drafting Tools"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
+                  />
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    Enter a clear category when none of the listed options fit.
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -960,18 +1021,6 @@ function Dashboard() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Pickup Location</label>
-                <input
-                  type="text"
-                  name="pickup_location"
-                  value={formData.pickup_location}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Hostel A Room 302, Library Main Gate"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium"
-                />
-              </div>
-
               {/* Product Image Uploader */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Product Image (Optional)</label>
@@ -994,7 +1043,7 @@ function Dashboard() {
                           <button
                             type="button"
                             onClick={() => handleRemoveImage(idx)}
-                            className="p-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white transition-all cursor-pointer"
+                            className="theme-danger-button p-1.5 rounded-lg transition-all cursor-pointer"
                             title="Remove Image"
                           >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1044,7 +1093,7 @@ function Dashboard() {
                   rows="3"
                   value={formData.description}
                   onChange={handleInputChange}
-                  placeholder="Provide detail on what is included, pickup location, or borrowing guidelines."
+                  placeholder="Provide details about what is included or any borrowing guidelines."
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm font-medium resize-none"
                 />
               </div>
@@ -1060,7 +1109,7 @@ function Dashboard() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-50 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
+                  className="theme-primary-button flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
                 >
                   {submitting ? 'Saving...' : 'Save Listing'}
                 </button>

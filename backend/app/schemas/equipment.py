@@ -58,7 +58,7 @@ class EquipmentBase(BaseModel):
 
 
 class EquipmentCreate(EquipmentBase):
-    pickup_location: str = Field(min_length=1, max_length=255)
+    pass
 
 
 class EquipmentUpdate(BaseModel):

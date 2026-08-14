@@ -87,7 +87,7 @@ function EquipmentDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
+      <div className="theme-page min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <svg className="animate-spin h-10 w-10 text-indigo-600" fill="none" viewBox="0 0 24 24">
@@ -102,7 +102,7 @@ function EquipmentDetail() {
 
   if (error || !item) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
+      <div className="theme-page min-h-screen flex flex-col">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div className="p-4 rounded-full bg-rose-100 dark:bg-rose-950/40 text-rose-600 mb-4">
@@ -112,7 +112,7 @@ function EquipmentDetail() {
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">Could Not Load Listing</h2>
           <p className="text-slate-500 max-w-md mb-6">{error || 'The equipment listing you requested does not exist.'}</p>
-          <Link to="/" className="px-5 py-3 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20 transition-all">
+          <Link to="/" className="theme-primary-button px-5 py-3 text-sm font-bold rounded-xl transition-all">
             Return to Explore
           </Link>
         </div>
@@ -274,7 +274,7 @@ function EquipmentDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col">
+    <div className="theme-page min-h-screen flex flex-col">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -296,7 +296,7 @@ function EquipmentDetail() {
           <div className="lg:col-span-2 space-y-8">
             
             {/* Gallery Carousel */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 shadow-sm p-4">
+            <div className="theme-card bg-white dark:bg-slate-800 rounded-3xl overflow-hidden border border-slate-200/60 dark:border-slate-700/50 shadow-sm p-4">
               {item.image_urls && item.image_urls.length > 0 ? (
                 <div className="space-y-4">
                   {/* Main Display Image */}
@@ -353,7 +353,7 @@ function EquipmentDetail() {
                 </div>
               ) : (
                 /* Falling banner if no images */
-                <div className="h-44 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10 dark:from-indigo-950/20 dark:to-violet-950/20 flex flex-col items-center justify-center text-slate-400">
+                <div className="h-44 rounded-2xl bg-[var(--accent-blue)] flex flex-col items-center justify-center text-slate-500 border border-[var(--border)]">
                   <svg className="h-12 w-12 text-slate-300 dark:text-slate-700 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -363,9 +363,9 @@ function EquipmentDetail() {
             </div>
 
             {/* Specification and Description Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/50 shadow-sm space-y-6">
+            <div className="theme-card bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/50 shadow-sm space-y-6">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs uppercase tracking-wider font-extrabold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-200/20">
+                <span className="theme-badge-lavender text-xs uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-lg">
                   {item.category}
                 </span>
                 <span className={`text-[10px] font-extrabold tracking-wider px-3 py-1 rounded-full text-white ${
@@ -428,7 +428,7 @@ function EquipmentDetail() {
             </div>
 
             {/* Reviews Board Section */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/50 shadow-sm space-y-6">
+            <div className="theme-card bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/50 shadow-sm space-y-6">
               <h2 className="text-2xl font-extrabold text-slate-950 dark:text-white">Customer Reviews</h2>
               
               {/* Write a Review (Only if not owner and logged in) */}
@@ -478,7 +478,7 @@ function EquipmentDetail() {
                   <button
                     type="submit"
                     disabled={reviewSubmitting}
-                    className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-650 hover:bg-indigo-600 rounded-xl transition-all cursor-pointer shadow-md disabled:bg-slate-350 disabled:shadow-none"
+                    className="theme-primary-button px-5 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer disabled:bg-slate-350"
                   >
                     {reviewSubmitting ? 'Posting...' : 'Post Review'}
                   </button>
@@ -531,7 +531,7 @@ function EquipmentDetail() {
           <div className="space-y-6">
             
             {/* Booking Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/50 shadow-lg space-y-5 sticky top-24">
+            <div className="theme-card bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200/60 dark:border-slate-700/50 shadow-lg space-y-5 sticky top-24">
               <div>
                 <span className="block text-xs font-bold uppercase tracking-wider text-slate-400">
                   {isRental ? 'Rental Fee' : 'Purchase Cost'}
@@ -543,18 +543,18 @@ function EquipmentDetail() {
               </div>
 
               {bookingError && (
-                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-xs font-bold text-rose-600 dark:text-rose-455">
+                <div className="theme-alert-error p-3.5 rounded-xl border text-xs font-bold">
                   {bookingError}
                 </div>
               )}
               {bookingSuccess && (
-                <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 text-xs font-bold text-emerald-600 dark:text-emerald-455">
+                <div className="theme-alert-success p-3.5 rounded-xl border text-xs font-bold">
                   Booking request created! Redirecting...
                 </div>
               )}
 
               {isOwner ? (
-                <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 text-center">
+                <div className="theme-alert-info p-4 rounded-2xl border text-center">
                   <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
                     Your Listing
                   </span>
@@ -616,7 +616,7 @@ function EquipmentDetail() {
                   <button
                     type="submit"
                     disabled={bookingSubmitting || !isAvailable}
-                    className={`w-full py-3.5 px-6 rounded-2xl font-bold text-sm text-white shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    className={`theme-secondary-button w-full py-3.5 px-6 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
                       isAvailable
                         ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20 hover:scale-[1.01] active:scale-[0.99]'
                         : 'bg-slate-350 dark:bg-slate-800 text-slate-455 shadow-none pointer-events-none'
