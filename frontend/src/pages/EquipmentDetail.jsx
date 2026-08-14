@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
 import BookingCalendar from '../components/BookingCalendar.jsx'
 import api, { API_BASE_URL } from '../services/api'
+import { ensureChatIdentity } from '../services/chatCrypto'
 import { formatApiError } from '../utils/errorFormatter'
 import { formatDate } from '../utils/dateFormatter'
 
@@ -45,6 +46,8 @@ function EquipmentDetail() {
   const [reviewError, setReviewError] = useState('')
   const [reviewSuccess, setReviewSuccess] = useState(false)
   const [reviewSubmitting, setReviewSubmitting] = useState(false)
+  const [chatStarting, setChatStarting] = useState(false)
+  const [chatError, setChatError] = useState('')
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -112,7 +115,7 @@ function EquipmentDetail() {
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">Could Not Load Listing</h2>
           <p className="text-slate-500 max-w-md mb-6">{error || 'The equipment listing you requested does not exist.'}</p>
-          <Link to="/" className="theme-primary-button px-5 py-3 text-sm font-bold rounded-xl transition-all">
+          <Link to="/explore" className="theme-primary-button px-5 py-3 text-sm font-bold rounded-xl transition-all">
             Return to Explore
           </Link>
         </div>
@@ -133,6 +136,26 @@ function EquipmentDetail() {
     const diffTime = end - start
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
     return diffDays > 0 ? diffDays : 0
+  }
+
+  const handleMessageSeller = async () => {
+    if (!token || !currentUser) {
+      navigate('/login')
+      return
+    }
+    setChatStarting(true)
+    setChatError('')
+    try {
+      await ensureChatIdentity(currentUser.id, token)
+      const response = await api.post('/chats', { equipment_id: item.id }, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      navigate(`/chat/${response.data.id}`)
+    } catch (err) {
+      setChatError(formatApiError(err))
+    } finally {
+      setChatStarting(false)
+    }
   }
 
   const handleBookingSubmit = async (e) => {
@@ -419,12 +442,27 @@ function EquipmentDetail() {
                 <div className="h-12 w-12 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-lg shadow-inner">
                   {item.owner?.name?.slice(0, 2).toUpperCase() || 'OP'}
                 </div>
-                <div>
+                <div className="min-w-0 flex-1">
                   <span className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-455">Owner Profile</span>
                   <span className="block font-bold text-slate-900 dark:text-white mt-0.5">{item.owner?.name || 'College Student'}</span>
                   <span className="block text-xs text-slate-400 font-medium">@{item.owner?.username || 'user'} • {item.owner?.email || 'No email shared'}</span>
                 </div>
+                {currentUser && !isOwner && (
+                  <button
+                    type="button"
+                    onClick={handleMessageSeller}
+                    disabled={chatStarting}
+                    className="theme-secondary-button shrink-0 rounded-xl px-4 py-2.5 text-xs font-bold cursor-pointer"
+                  >
+                    {chatStarting ? 'Opening…' : 'Message seller'}
+                  </button>
+                )}
               </div>
+              {chatError && (
+                <div className="theme-alert-error rounded-xl border p-3 text-sm font-semibold">
+                  {chatError}
+                </div>
+              )}
             </div>
 
             {/* Reviews Board Section */}

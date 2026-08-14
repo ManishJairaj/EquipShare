@@ -18,6 +18,8 @@ REQUIRED_TABLES = {
     "rental_requests",
     "reviews",
     "notifications",
+    "chat_conversations",
+    "chat_messages",
     "alembic_version",
 }
 DEFAULT_PASSWORD = "ValidTestPassword!42"

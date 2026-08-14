@@ -1,24 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAF9F6;
-  --foreground: #171717;
-  --primary: #CDB4FF;
-  --secondary: #B7E4C7;
+  /* Shared palette extracted from the EquipShare landing page. */
+  --background: #F9F9F0;
+  --foreground: #0F0E0B;
+  --primary: #D5FAD3;
+  --secondary: #BDD9E9;
+  --stone: #3D3B34;
+  --accent-lavender: #CDB4FF;
   --accent-yellow: #FFE8A3;
-  --accent-blue: #A8DADC;
+  --accent-blue: #BDD9E9;
   --accent-peach: #FFC8A2;
-  --accent-red: #FFB4B4;
-  --surface: #FFFFFF;
-  --surface-muted: #F1F1F1;
-  --text-primary: #171717;
-  --text-secondary: #737373;
-  --border: #171717;
-  --border-soft: rgb(23 23 23 / 22%);
-  --focus-ring: rgb(205 180 255 / 48%);
-  --foreground-hover: #303030;
-  --primary-hover: #BE9EF9;
-  --placeholder: #969696;
+  --accent-red: #FFC8A2;
+  --surface: #F9F9F0;
+  --surface-muted: #E8E8DE;
+  --text-primary: #0F0E0B;
+  --text-secondary: #3D3B34;
+  --border: #0F0E0B;
+  --border-soft: rgb(15 14 11 / 25%);
+  --focus-ring: rgb(189 217 233 / 75%);
+  --foreground-hover: #3D3B34;
+  --primary-hover: #C3EEC1;
+  --placeholder: #77756C;
 }
 
 html {
@@ -50,7 +53,7 @@ body {
 }
 
 .theme-navbar {
-  background: rgb(250 249 246 / 96%) !important;
+  background: rgb(249 249 240 / 96%) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
   box-shadow: none !important;
@@ -58,7 +61,7 @@ body {
 
 .theme-logo-mark {
   background: var(--foreground) !important;
-  color: white !important;
+  color: var(--surface) !important;
   border: 1.5px solid var(--border);
   box-shadow: none !important;
 }
@@ -71,7 +74,7 @@ body {
 }
 
 .theme-card:hover {
-  box-shadow: 4px 4px 0 rgb(23 23 23 / 12%) !important;
+  box-shadow: 4px 4px 0 rgb(15 14 11 / 12%) !important;
 }
 
 .theme-card-muted {
@@ -88,7 +91,7 @@ body {
 .theme-primary-button,
 .equipshare-app .theme-primary-button {
   background: var(--foreground) !important;
-  color: white !important;
+  color: var(--surface) !important;
   border: 1.5px solid var(--border) !important;
   box-shadow: none !important;
 }
@@ -119,8 +122,8 @@ body {
 
 .theme-danger-button,
 .equipshare-app .theme-danger-button {
-  background: var(--accent-red) !important;
-  color: var(--foreground) !important;
+  background: var(--stone) !important;
+  color: var(--surface) !important;
   border: 1.5px solid var(--border) !important;
   box-shadow: none !important;
 }
@@ -157,10 +160,10 @@ body {
 .theme-badge-peach,
 .theme-badge-red {
   color: var(--foreground) !important;
-  border: 1px solid rgb(23 23 23 / 35%) !important;
+  border: 1px solid rgb(15 14 11 / 35%) !important;
 }
 
-.theme-badge-lavender { background: var(--primary) !important; }
+.theme-badge-lavender { background: var(--accent-lavender) !important; }
 .theme-badge-blue { background: var(--accent-blue) !important; }
 .theme-badge-yellow { background: var(--accent-yellow) !important; }
 .theme-badge-mint { background: var(--secondary) !important; }
@@ -171,7 +174,7 @@ body {
 .theme-alert-info { background: var(--accent-blue) !important; color: var(--foreground) !important; border-color: var(--border) !important; }
 .theme-alert-pending { background: var(--accent-yellow) !important; color: var(--foreground) !important; border-color: var(--border) !important; }
 .theme-alert-warning { background: var(--accent-peach) !important; color: var(--foreground) !important; border-color: var(--border) !important; }
-.theme-alert-error { background: var(--accent-red) !important; color: var(--foreground) !important; border-color: var(--border) !important; }
+.theme-alert-error { background: var(--stone) !important; color: var(--surface) !important; border-color: var(--border) !important; }
 
 /* Bridge legacy Tailwind colors to the centralized palette. */
 .equipshare-app :is(.bg-white, [class~="bg-white/80"]) { background-color: var(--surface) !important; }

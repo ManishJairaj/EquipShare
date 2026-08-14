@@ -72,7 +72,7 @@ function Register() {
       localStorage.setItem('token', loginResponse.data.access_token)
       setSuccess(true)
       setTimeout(() => {
-        navigate('/')
+        navigate('/explore')
       }, 2000)
     } catch (err) {
       setError(formatApiError(err))

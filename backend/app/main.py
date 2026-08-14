@@ -5,6 +5,7 @@ import os
 
 from app.routers import (
     auth_router,
+    chats_router,
     equipment_router,
     notifications_router,
     rentals_router,
@@ -26,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(chats_router)
 app.include_router(equipment_router)
 app.include_router(rentals_router)
 app.include_router(notifications_router)

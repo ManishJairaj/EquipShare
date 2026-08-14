@@ -12,7 +12,8 @@ class NotificationOut(BaseModel):
     type: NotificationType
     message: str
     is_read: bool
-    rental_request_id: int
+    rental_request_id: int | None
+    conversation_id: int | None
     created_at: datetime
 
 

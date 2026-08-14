@@ -9,6 +9,16 @@ from app.schemas.equipment import (
     OwnerSummary,
     PaginatedEquipmentResponse,
 )
+from app.schemas.chat import (
+    ChatConversationCreate,
+    ChatConversationDetail,
+    ChatConversationOut,
+    ChatMessageCreate,
+    ChatMessageOut,
+    ChatParticipantOut,
+    ChatPublicKeyOut,
+    ChatPublicKeyUpdate,
+)
 from app.schemas.rental_request import (
     RentalBorrowerSummary,
     RentalEquipmentSummary,
@@ -25,6 +35,14 @@ from app.schemas.user import Token, TokenData, UserCreate, UserOut
 
 __all__ = [
     "AvailabilityStatus",
+    "ChatConversationCreate",
+    "ChatConversationDetail",
+    "ChatConversationOut",
+    "ChatMessageCreate",
+    "ChatMessageOut",
+    "ChatParticipantOut",
+    "ChatPublicKeyOut",
+    "ChatPublicKeyUpdate",
     "EquipmentCondition",
     "EquipmentCreate",
     "EquipmentOut",

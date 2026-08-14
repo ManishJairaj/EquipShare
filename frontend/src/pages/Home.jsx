@@ -357,8 +357,8 @@ function Home() {
 
       {/* Hero Section */}
       <section className="theme-hero relative overflow-hidden py-20 px-4 text-center">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(99,102,241,0.1),transparent)] pointer-events-none"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(168,85,247,0.08),transparent)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(15,14,11,0.06),transparent)] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(189,217,233,0.3),transparent)] pointer-events-none"></div>
         
         <div className="max-w-4xl mx-auto relative z-10">
           <span className="theme-badge-yellow inline-flex items-center gap-1.5 py-1 px-3 rounded-full text-xs font-bold mb-6">

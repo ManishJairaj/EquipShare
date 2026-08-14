@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import api from '../services/api'
+import { ensureChatIdentity } from '../services/chatCrypto'
 import { formatDateTime } from '../utils/dateFormatter'
 
 function Navbar() {
@@ -59,6 +60,9 @@ function Navbar() {
         if (!cancelled) {
           setUser(res.data)
           localStorage.setItem('user', JSON.stringify(res.data))
+          ensureChatIdentity(res.data.id, token).catch((err) => {
+            console.warn('Secure chat key could not be initialized:', err.message)
+          })
         }
       })
       .catch(() => {
@@ -70,7 +74,7 @@ function Navbar() {
       })
 
     fetchNotifications()
-    const intervalId = window.setInterval(fetchNotifications, 30000)
+    const intervalId = window.setInterval(fetchNotifications, 10000)
     window.addEventListener('equipshare:notifications-changed', fetchNotifications)
 
     return () => {
@@ -95,7 +99,11 @@ function Navbar() {
       }
     }
     setNotificationsOpen(false)
-    navigate('/dashboard?tab=rentals')
+    if (notification.type === 'new_chat_message' && notification.conversation_id) {
+      navigate(`/chat/${notification.conversation_id}`)
+    } else {
+      navigate('/dashboard?tab=rentals')
+    }
   }
 
   const markAllNotificationsRead = async () => {
@@ -122,6 +130,7 @@ function Navbar() {
   const latestUnread = notifications.find(notification => !notification.is_read)
 
   const notificationTone = (notification) => {
+    if (notification.type === 'new_chat_message') return 'theme-alert-info'
     if (notification.type === 'request_accepted') return 'theme-alert-success'
     if (notification.type === 'request_rejected') return 'theme-alert-error'
     return 'theme-alert-pending'
@@ -145,8 +154,8 @@ function Navbar() {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-6">
             <Link
-              to="/"
-              className={location.pathname === '/'
+              to="/explore"
+              className={location.pathname === '/explore'
                 ? "theme-nav-active font-bold px-3 py-1.5 rounded-lg transition-all"
                 : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
             >
@@ -162,6 +171,14 @@ function Navbar() {
                     : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
                 >
                   Dashboard
+                </Link>
+                <Link
+                  to="/chat"
+                  className={location.pathname.startsWith('/chat')
+                    ? "theme-nav-active font-bold px-3 py-1.5 rounded-lg transition-all"
+                    : "text-slate-600 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 font-medium px-3 py-1.5 rounded-xl transition-colors"}
+                >
+                  Chats
                 </Link>
                 <button
                   type="button"
@@ -249,9 +266,9 @@ function Navbar() {
       {isOpen && (
         <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-2 pt-2 pb-3 space-y-1 sm:px-3 animate-fade-in">
           <Link
-            to="/"
+            to="/explore"
             onClick={() => setIsOpen(false)}
-            className={location.pathname === '/'
+            className={location.pathname === '/explore'
               ? "block px-3 py-2 rounded-xl text-base font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/30"
               : "block px-3 py-2 rounded-xl text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"}
           >
@@ -267,6 +284,15 @@ function Navbar() {
                   : "block px-3 py-2 rounded-xl text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-850"}
               >
                 Dashboard
+              </Link>
+              <Link
+                to="/chat"
+                onClick={() => setIsOpen(false)}
+                className={location.pathname.startsWith('/chat')
+                  ? "block px-3 py-2 rounded-xl text-base font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/80 dark:bg-indigo-950/30"
+                  : "block px-3 py-2 rounded-xl text-base font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"}
+              >
+                Chats
               </Link>
               <div className="pt-4 pb-2 border-t border-slate-200 dark:border-slate-800 px-3 flex items-center justify-between">
                 <div>

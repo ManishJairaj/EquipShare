@@ -24,7 +24,7 @@ def test_database_configuration_has_no_sqlite_fallback():
 def test_alembic_has_one_linear_head():
     config = Config(str(BACKEND_DIR / "alembic.ini"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["2b4c6d8e0f1a"]
+    assert script.get_heads() == ["b8f3d1a7c2e4"]
 
 
 def test_migrations_represent_current_foundational_schema():
@@ -38,6 +38,8 @@ def test_migrations_represent_current_foundational_schema():
         '"availability_status"',
         "rental_requests",
         "notifications",
+        "chat_conversations",
+        "chat_messages",
         '"owner_id"',
     ):
         assert required_schema_term in migration_text
